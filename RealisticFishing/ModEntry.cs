@@ -18,12 +18,14 @@ namespace FishingMod
         *********/
         /// <summary>The mod configuration.</summary>
 
+        // Used to detect if the player is fishing.
         private SBobberBar Bobber;
 
         private bool BeganFishingGame = false;
         private bool EndedFishingGame = false;
         private bool JustFished = false;
 
+        // Which direction the player was facing when they were fishing.  Used in ThrowFish.
         private int FishingDirection;
 
         private Item FishCaught;
@@ -45,12 +47,18 @@ namespace FishingMod
         ** Private methods
         *********/
 
+        /* GameEvents_OnUpdateTick
+        * Triggers every time the menu changes.
+        */
         private void MenuEvents_MenuChanged(object sender, EventArgsClickableMenuChanged e)
         {
             if (e.NewMenu is BobberBar menu)
                 this.Bobber = SBobberBar.ConstructFromBaseClass(menu);
         }
 
+        /* GameEvents_OnUpdateTick
+         * Triggers 60 times per second.  Use one of the methods here https://stardewvalleywiki.com/Modding:Modder_Guide/APIs/Events#Game for other time durations
+         */
         private void GameEvents_OnUpdateTick(object sender, EventArgs e)
         {
             if (Game1.activeClickableMenu is BobberBar && this.Bobber != null) {
@@ -77,11 +85,18 @@ namespace FishingMod
             }
         }
 
+        /* ControlEvents_KeyPressed
+         * Triggers every a key is pressed.
+         */
         private void ControlEvents_KeyPressed(object sender, EventArgsKeyPressed e)
         {
 
         }
 
+        /* PlayerEvents_InventoryChanged
+         * Triggers every time the inventory changes.
+         * Calls PromptThrowBackFish if the player just gained a fish and also just finished fishing.
+         */
         private void PlayerEvents_InventoryChanged(object sender, EventArgsInventoryChanged e) {
             if (this.JustFished) { // Player finished fishing, but may not have caught anything.
                 this.FishCaught = e.Added[0].Item;
@@ -90,16 +105,28 @@ namespace FishingMod
             this.JustFished = false;
         }
 
+        /* OnFishingEnd
+        * Triggers once when the fishing minigame starts.  
+        * Put function calls here, not iterative style code.
+        */
         private void OnFishingBegin() {
             this.Monitor.Log("Fishing has begun.");
             this.FishingDirection = Game1.player.FacingDirection;
         }
 
+        /* OnFishingEnd
+         * Triggers once after the player catches a fish (not on trash)
+         * Put function calls here, not iterative style code.
+         */
         private void OnFishingEnd() {
             this.Monitor.Log("Fishing has ended.");
             this.JustFished = true;
         }
 
+        /* PromptThrowBackFish
+         * Triggers every time the player catches a fish while they are still under the quota.
+         * Calls ThrowBackFish as a callback to handle the choice made.
+         */
         private void PromptThrowBackFish() {
             Response[] answerChoices = new[]
             {
@@ -110,6 +137,10 @@ namespace FishingMod
             Game1.currentLocation.createQuestionDialogue("Throw it back?", answerChoices, new GameLocation.afterQuestionBehavior(this.ThrowBackFish));
         }
 
+        /* ThrowBackFish
+         * Triggers every time the player catches a fish while they are still under the quota.
+         * If whichAnswer == "Yes", removes the fish from the inventory and calls ThrowFish
+         */
         private void ThrowBackFish(Farmer who, string whichAnswer) {
             if (whichAnswer == "Yes") {
 
@@ -124,37 +155,39 @@ namespace FishingMod
             }
         }
 
+        /* ThrowFish
+         * Drops the fish that was just caught 192 pixels in front of the player, almost always into the water.
+         * TODO: Make it so that the item always lands in the water, or that the item is destroyed if it doesn't.
+         */
         private void ThrowFish(Item fish, Vector2 origin, int direction, GameLocation location, int groundLevel = -1) {
             if (location == null)
                 location = Game1.currentLocation;
             Vector2 targetLocation = new Vector2(origin.X, origin.Y);
-
-
 
             switch (direction)
             {
                 case -1:
                     targetLocation = Game1.player.getStandingPosition();
                     break;
-                case 0:
+                case 0: // up
                     origin.Y -= 192f;
                     targetLocation.Y += 192f;
                     break;
-                case 1:
+                case 1: // right
                     origin.X += 192f;
                     targetLocation.X -= 192f;
                     break;
-                case 2:
+                case 2: // down
                     origin.Y += 192f;
                     targetLocation.Y -= 192f;
                     break;
-                case 3:
+                case 3: // left
                     origin.X -= 192f;
                     targetLocation.X += 192f;
                     break;
             }
 
-            Debris debris = new Debris(-2, 1, origin, targetLocation, 0.1f);
+            Debris debris = new Debris(-2, 1, origin, targetLocation, 0.1f); // (int debrisType, int numberOfChunks, Vector2 debrisOrigin, Vector2 playerPosition, float velocityMultiplyer)
             debris.item = fish;
             if (groundLevel != -1)
                 debris.chunkFinalYLevel = groundLevel;
