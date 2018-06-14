@@ -21,6 +21,7 @@ namespace FishingMod
         // Used to detect if the player is fishing.
         private SBobberBar Bobber;
 
+        // Handles the event handler logic.
         private bool BeganFishingGame = false;
         private bool EndedFishingGame = false;
         private bool JustFished = false;
@@ -28,7 +29,11 @@ namespace FishingMod
         // Which direction the player was facing when they were fishing.  Used in ThrowFish.
         private int FishingDirection;
 
+        // The last fish caught.
         private Item FishCaught;
+
+        // How many fish have been caught today.
+        private int NumFishCaughtToday;
 
         /*********
         ** Public methods
@@ -41,6 +46,9 @@ namespace FishingMod
             GameEvents.UpdateTick += this.GameEvents_OnUpdateTick;
             ControlEvents.KeyPressed += this.ControlEvents_KeyPressed;
             PlayerEvents.InventoryChanged += this.PlayerEvents_InventoryChanged;
+            TimeEvents.AfterDayStarted += this.TimeEvents_AfterDayStarted;
+            SaveEvents.AfterCreate += this.SaveEvents_AfterCreate;
+            SaveEvents.AfterLoad += this.SaveEvents_AfterLoad;
         }
 
         /*********
@@ -54,6 +62,28 @@ namespace FishingMod
         {
             if (e.NewMenu is BobberBar menu)
                 this.Bobber = SBobberBar.ConstructFromBaseClass(menu);
+        }
+
+        /* TimeEvents_AfterDayStarted
+         * Triggers at the beginning of each day.
+         */
+        private void TimeEvents_AfterDayStarted(object sender, EventArgs e) {
+            this.NumFishCaughtToday = 0;
+        }
+
+        /* SaveEvents_AfterCreate
+         * Triggers after a save file is created. Used to seed the population of fish.
+         */
+        private void SaveEvents_AfterCreate(object sender, EventArgs e) {
+            
+        }
+
+        /* SaveEvents_AfterLoad
+        * Triggers after a save file is created. Used to seed the population of fish.
+        */
+        private void SaveEvents_AfterLoad(object sender, EventArgs e)
+        {
+
         }
 
         /* GameEvents_OnUpdateTick
@@ -152,6 +182,8 @@ namespace FishingMod
                     Game1.player.removeItemFromInventory(this.FishCaught);
                 }
                 this.ThrowFish(fish, who.getStandingPosition(), this.FishingDirection, (GameLocation)null, -1);
+            } else if (whichAnswer == "No") {
+                
             }
         }
 
