@@ -85,7 +85,7 @@ namespace RealiticFishing
          * Triggers after a save file is created. Used to seed the population of fish.
          */
         private void SaveEvents_AfterCreate(object sender, EventArgs e) {
-            RealisticFishingData instance = new RealisticFishingData();
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
 
             this.NumFishCaughtToday = instance.NumFishCaughtToday;
             this.fp = instance.fp;
@@ -93,7 +93,7 @@ namespace RealiticFishing
 
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
 
-            this.Monitor.Log(instance.fp.ToString());
+            this.Monitor.Log("AfterCreate: " + instance.fp.ToString());
         }
 
         /* SaveEvents_AfterLoad
@@ -107,6 +107,8 @@ namespace RealiticFishing
             this.fp = instance.fp;
             this.population = instance.fp.population;
 
+            this.Monitor.Log("AfterLoad: " + instance.fp.ToString());
+
         }
 
         /* SaveEvents_AfterLoad
@@ -119,6 +121,8 @@ namespace RealiticFishing
             instance.fp = this.fp;
             instance.population = this.fp.population;
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
+
+            this.Monitor.Log("BeforeSave: " + instance.fp.ToString());
         }
 
         /* GameEvents_OnUpdateTick
