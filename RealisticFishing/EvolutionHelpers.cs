@@ -9,7 +9,7 @@ namespace RealisticFishing
         public static float MutationRate = 0.05f;
 
 
-        public static double GetMutatedFishLength(int fishLength, int minLength, int maxLength) {
+        public static double GetMutatedFishLength(double fishLength, int minLength, int maxLength) {
 
             Random rand = new Random(); //reuse this if you are generating many
             double u1 = 1.0 - rand.NextDouble(); //uniform(0,1] random doubles

@@ -17,5 +17,9 @@ namespace RealisticFishing
             this.MaxLength = maxLength;
             this.Length = length;
         }
+
+        public FishModel MakeBaby() {
+            return new FishModel(this.Name, this.MinLength, this.MaxLength, EvolutionHelpers.GetMutatedFishLength(this.Length, this.MinLength, this.MaxLength));
+        }
     }
 }
