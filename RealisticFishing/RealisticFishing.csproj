@@ -33,6 +33,10 @@
     <Compile Include="ModEntry.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Framework\SBobberBar.cs" />
+    <Compile Include="RealisticFishingData.cs" />
+    <Compile Include="EvolutionHelpers.cs" />
+    <Compile Include="FishPopulation.cs" />
+    <Compile Include="FishModel.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="manifest.json" />

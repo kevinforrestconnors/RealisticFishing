@@ -3,8 +3,16 @@ namespace RealisticFishing
 {
     public class RealisticFishingData
     {
-        public RealisticFishingData()
+
+        public int NumFishCaughtToday { get; set; }
+
+        public RealisticFishingData() {
+            
+        }
+
+        public RealisticFishingData(int numFishCaughtToday)
         {
+            this.NumFishCaughtToday = numFishCaughtToday;
         }
     }
 }

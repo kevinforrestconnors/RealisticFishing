@@ -7,20 +7,41 @@ namespace RealisticFishing
     public class FishPopulation
     {
 
-        public Dictionary<String, List<Fish>> fishPopulation;
+        public Dictionary<String, List<FishModel>> fishPopulation;
+
+        public static List<String> AllFish;
 
         public FishPopulation()
         {
-            this.fishPopulation = new Dictionary<String, List<Fish>>();
+
+            FishPopulation.AllFish = new List<String>();
+            FishPopulation.AllFish.Add("Herring");
+            FishPopulation.AllFish.Add("Tuna");
+            FishPopulation.AllFish.Add("Mackerel");
+
+            this.fishPopulation = new Dictionary<String, List<FishModel>>();
+
+            for (int i = 0; i < FishPopulation.AllFish.Count; i++) {
+
+                List<Fish> thisFishPopulation = new List<FishModel>();
+
+                int populationSize = new Random().Next(30, 60);
+
+                for (int i = 0; i < populationSize; i++) {
+                    thisFishPopulation.Add(new FishModel(FishPopulation.AllFish[i], FishPopulation.GetLengthOfNewFish()));
+                }
+
+                //this.fishPopulation.Add(FishPopulation.AllFish[i], 
+            } 
         }
 
         public override String ToString() {
             String ret = "";
 
-            for (int i = 0; i < Fish.AllFish.Count; i++)
+            for (int i = 0; i < FishPopulation.AllFish.Count; i++)
             {
-                List<Fish> fishOfType;
-                this.fishPopulation.TryGetValue(Fish.AllFish[i], out fishOfType);
+                List<FishModel> fishOfType;
+                this.fishPopulation.TryGetValue(FishPopulation.AllFish[i], out fishOfType);
 
                 if (fishOfType.Count > 0)
                 {
@@ -29,6 +50,10 @@ namespace RealisticFishing
             }
 
             return ret;
+        }
+
+        public static double GetLengthOfNewFish() {
+            return 5.5;
         }
     }
 }

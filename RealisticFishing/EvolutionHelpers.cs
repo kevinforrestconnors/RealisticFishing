@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+
 namespace RealisticFishing
 {
     public static class EvolutionHelpers
@@ -30,8 +32,8 @@ namespace RealisticFishing
 
         }
 
-        public static FishPopulation ComputeTomorrowPopulation(FishPopulation population) {
-            
+        public static Dictionary<String, List<FishModel>> ComputeTomorrowPopulation(Dictionary<String, List<FishModel>> population) {
+            return new FishPopulation().fishPopulation;
         }
     }
 }
