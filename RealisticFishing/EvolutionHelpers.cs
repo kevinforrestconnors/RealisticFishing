@@ -33,7 +33,7 @@ namespace RealisticFishing
         }
 
         public static Dictionary<String, List<FishModel>> ComputeTomorrowPopulation(Dictionary<String, List<FishModel>> population) {
-            return new FishPopulation().fishPopulation;
+            return new FishPopulation().population;
         }
     }
 }

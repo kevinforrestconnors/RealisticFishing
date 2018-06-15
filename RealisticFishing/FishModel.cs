@@ -5,12 +5,16 @@ namespace RealisticFishing
 {
     public class FishModel
     {
-        public String name;
+        public String Name;
+        public int MinLength;
+        public int MaxLength;
         public double Length;
 
-        public FishModel(String name, double length)
+        public FishModel(String name, int minLength, int maxLength, double length)
         {
-            this.name = name;
+            this.Name = name;
+            this.MinLength = minLength;
+            this.MaxLength = maxLength;
             this.Length = length;
         }
     }

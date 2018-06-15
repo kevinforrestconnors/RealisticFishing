@@ -7,6 +7,7 @@ using StardewValley;
 using StardewValley.Menus;
 using StardewValley.Tools;
 using RealisticFishing;
+using System.Collections.Generic;
 
 namespace RealiticFishing
 {
@@ -37,6 +38,11 @@ namespace RealiticFishing
 
         // How many fish the player can catch each day.
         private int FishQuota = 10;
+
+        // The class instance of the saved FishPopulation data
+        private FishPopulation fp;
+        // The population data structure
+        private Dictionary<String, List<FishModel>> population;
 
         /*********
         ** Public methods
@@ -79,9 +85,15 @@ namespace RealiticFishing
          * Triggers after a save file is created. Used to seed the population of fish.
          */
         private void SaveEvents_AfterCreate(object sender, EventArgs e) {
-            RealisticFishingData instance = new RealisticFishingData(0);
-            //Do Work
+            RealisticFishingData instance = new RealisticFishingData();
+
+            this.NumFishCaughtToday = instance.NumFishCaughtToday;
+            this.fp = instance.fp;
+            this.population = instance.fp.population;
+
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
+
+            this.Monitor.Log(instance.fp.ToString());
         }
 
         /* SaveEvents_AfterLoad
@@ -89,8 +101,12 @@ namespace RealiticFishing
         */
         private void SaveEvents_AfterLoad(object sender, EventArgs e)
         {
-            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json");
+
             this.NumFishCaughtToday = instance.NumFishCaughtToday;
+            this.fp = instance.fp;
+            this.population = instance.fp.population;
+
         }
 
         /* SaveEvents_AfterLoad
@@ -98,8 +114,10 @@ namespace RealiticFishing
         */
         private void SaveEvents_BeforeSave(object sender, EventArgs e)
         {
-            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json");
             instance.NumFishCaughtToday = this.NumFishCaughtToday;
+            instance.fp = this.fp;
+            instance.population = this.fp.population;
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
         }
 
