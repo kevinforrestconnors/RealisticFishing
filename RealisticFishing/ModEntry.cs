@@ -7,6 +7,7 @@ using StardewValley;
 using StardewValley.Menus;
 using StardewValley.Tools;
 using RealisticFishing;
+using System.Collections.Generic;
 
 namespace RealiticFishing
 {
@@ -32,11 +33,19 @@ namespace RealiticFishing
         // The last fish caught.
         private Item FishCaught;
 
+        // The list of all fish caught today.
+        private List<String> AllFishCaughtToday;
+
         // How many fish have been caught today.
         private int NumFishCaughtToday;
 
         // How many fish the player can catch each day.
         private int FishQuota = 10;
+
+        // The class instance of the saved FishPopulation data
+        private FishPopulation fp;
+        // The population data structure
+        private Dictionary<String, List<FishModel>> population;
 
         /*********
         ** Public methods
@@ -72,35 +81,75 @@ namespace RealiticFishing
          * Triggers at the beginning of each day.
          */
         private void TimeEvents_AfterDayStarted(object sender, EventArgs e) {
+            List<String> changedFish = new List<String>();
+
+            Random rand = new Random();
+
+            foreach (String fishName in this.AllFishCaughtToday) {
+                changedFish.Add(fishName);
+
+                List<FishModel> fishOfType;
+                this.population.TryGetValue(fishName, out fishOfType);
+
+                int numFishOfType = fishOfType.Count;
+                int selectedFish = rand.Next(0, numFishOfType);
+
+                fishOfType.Add(fishOfType[selectedFish].MakeBaby());
+
+                this.population[fishName] = fishOfType;
+            }
+
             this.NumFishCaughtToday = 0;
+            this.AllFishCaughtToday = new List<String>();
+
+            this.Monitor.Log("TimeEvents_AfterDayStarted: " + this.fp.PrintChangedFish(changedFish));
         }
 
         /* SaveEvents_AfterCreate
-         * Triggers after a save file is created. Used to seed the population of fish.
+         * Triggers after a save file is updated. Used to seed the population of fish.
          */
         private void SaveEvents_AfterCreate(object sender, EventArgs e) {
-            RealisticFishingData instance = new RealisticFishingData(0);
-            //Do Work
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
+
+            this.NumFishCaughtToday = instance.NumFishCaughtToday;
+            this.AllFishCaughtToday = instance.AllFishCaughtToday;
+            this.fp = instance.fp;
+            this.population = instance.fp.population;
+
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
+
+            this.Monitor.Log("SaveEvents_AfterCreate: " + instance.fp.PrintChangedFish(new List<String>()));
         }
 
         /* SaveEvents_AfterLoad
-        * Triggers after a save file is loaded.  Used to recover NumFishCaughtToday if the player has a mod like Save Anywhere.
+        * Triggers after a save file is loaded.  Used to recover fields if the player has a mod like Save Anywhere.
         */
         private void SaveEvents_AfterLoad(object sender, EventArgs e)
         {
-            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json");
+
             this.NumFishCaughtToday = instance.NumFishCaughtToday;
+            this.AllFishCaughtToday = instance.AllFishCaughtToday;
+            this.fp = instance.fp;
+            this.population = instance.fp.population;
+
+            this.Monitor.Log("SaveEvents_AfterLoad: " + instance.fp.PrintChangedFish(new List<String>()));
+
         }
 
         /* SaveEvents_AfterLoad
-        * Triggers before a save file is save.  Used to save NumFishCaughtToday in case the player has a mod like Save Anywhere.
+        * Triggers before a save file is saved.  Used to save fields in case the player has a mod like Save Anywhere.
         */
         private void SaveEvents_BeforeSave(object sender, EventArgs e)
         {
-            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json");
             instance.NumFishCaughtToday = this.NumFishCaughtToday;
+            instance.AllFishCaughtToday = this.AllFishCaughtToday;
+            instance.fp = this.fp;
+            instance.population = this.fp.population;
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
+
+            this.Monitor.Log("BeforeSave: " + instance.fp.PrintChangedFish(new List<String>()));
         }
 
         /* GameEvents_OnUpdateTick
@@ -154,9 +203,11 @@ namespace RealiticFishing
                     this.JustFished = true;
                     return;
                 } else if (e.Added.Count > 0) {
-                    this.FishCaught = e.Added[0].Item;    
+                    this.FishCaught = e.Added[0].Item;
+                    this.OnFishCaught(this.FishCaught);
                 } else if (e.QuantityChanged.Count > 0) {
                     this.FishCaught = e.QuantityChanged[0].Item;
+                    this.OnFishCaught(this.FishCaught);
                 } else {
                     return;
                 }
@@ -182,6 +233,38 @@ namespace RealiticFishing
             this.Monitor.Log("Fishing has ended.");
             this.JustFished = true;
         }
+
+        /* OnFishCaught
+         * Triggers once after the player actually receives the fish in their inventory.
+         * Put function calls here, not iterative style code.
+         */
+        private void OnFishCaught(Item fish) {
+            this.AllFishCaughtToday.Add(fish.Name);
+            this.RemoveFishFromOcean(fish);
+        }
+
+        /* RemoveFishFromOcean(Item fish)
+         * Removes one fish of type fish from the ocean at random.
+         */
+        private void RemoveFishFromOcean(Item fish) {
+
+            // Prints the number of fish of this type before removing it
+            List<String> changedFish = new List<String>();
+            changedFish.Add(fish.Name);
+            this.Monitor.Log("RemoveFishFromOcean: " + this.fp.PrintChangedFish(changedFish));
+
+            List<FishModel> fishOfType;
+            this.population.TryGetValue(fish.Name, out fishOfType);
+
+            Random rand = new Random();
+            int numFishOfType = fishOfType.Count;
+            int selectedFish = rand.Next(0, numFishOfType);
+
+            fishOfType.RemoveAt(selectedFish);
+
+            this.Monitor.Log("RemoveFishFromOcean: " + this.fp.PrintChangedFish(changedFish));
+        }
+
 
         /* PromptThrowBackFish
          * Triggers every time the player catches a fish while they are still under the quota.
