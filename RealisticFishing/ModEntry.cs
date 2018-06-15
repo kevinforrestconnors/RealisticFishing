@@ -1,14 +1,14 @@
 ﻿using System;
 using RealiticFishing.Framework;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.Menus;
 using StardewValley.Tools;
+using RealisticFishing;
 
-namespace FishingMod
+namespace RealiticFishing
 {
     /// <summary>The main entry point.</summary>
     public class ModEntry : Mod
@@ -35,6 +35,9 @@ namespace FishingMod
         // How many fish have been caught today.
         private int NumFishCaughtToday;
 
+        // How many fish the player can catch each day.
+        private int FishQuota = 10;
+
         /*********
         ** Public methods
         *********/
@@ -49,6 +52,7 @@ namespace FishingMod
             TimeEvents.AfterDayStarted += this.TimeEvents_AfterDayStarted;
             SaveEvents.AfterCreate += this.SaveEvents_AfterCreate;
             SaveEvents.AfterLoad += this.SaveEvents_AfterLoad;
+            SaveEvents.BeforeSave += this.SaveEvents_BeforeSave;
         }
 
         /*********
@@ -75,15 +79,28 @@ namespace FishingMod
          * Triggers after a save file is created. Used to seed the population of fish.
          */
         private void SaveEvents_AfterCreate(object sender, EventArgs e) {
-            
+            RealisticFishingData instance = new RealisticFishingData(0);
+            //Do Work
+            this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
         }
 
         /* SaveEvents_AfterLoad
-        * Triggers after a save file is created. Used to seed the population of fish.
+        * Triggers after a save file is loaded.  Used to recover NumFishCaughtToday if the player has a mod like Save Anywhere.
         */
         private void SaveEvents_AfterLoad(object sender, EventArgs e)
         {
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
+            this.NumFishCaughtToday = instance.NumFishCaughtToday;
+        }
 
+        /* SaveEvents_AfterLoad
+        * Triggers before a save file is save.  Used to save NumFishCaughtToday in case the player has a mod like Save Anywhere.
+        */
+        private void SaveEvents_BeforeSave(object sender, EventArgs e)
+        {
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
+            instance.NumFishCaughtToday = this.NumFishCaughtToday;
+            this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
         }
 
         /* GameEvents_OnUpdateTick
@@ -126,13 +143,26 @@ namespace FishingMod
         /* PlayerEvents_InventoryChanged
          * Triggers every time the inventory changes.
          * Calls PromptThrowBackFish if the player just gained a fish and also just finished fishing.
+         * If the player caught treasure, waits until the player gains the fish and this executes again when the player gains the fish.
          */
         private void PlayerEvents_InventoryChanged(object sender, EventArgsInventoryChanged e) {
             if (this.JustFished) { // Player finished fishing, but may not have caught anything.
-                this.FishCaught = e.Added[0].Item;
+
+                this.JustFished = false;
+
+                if ((Game1.player.CurrentTool as FishingRod).treasureCaught) {
+                    this.JustFished = true;
+                    return;
+                } else if (e.Added.Count > 0) {
+                    this.FishCaught = e.Added[0].Item;    
+                } else if (e.QuantityChanged.Count > 0) {
+                    this.FishCaught = e.QuantityChanged[0].Item;
+                } else {
+                    return;
+                }
+
                 this.PromptThrowBackFish();
             }
-            this.JustFished = false;
         }
 
         /* OnFishingEnd
@@ -158,13 +188,24 @@ namespace FishingMod
          * Calls ThrowBackFish as a callback to handle the choice made.
          */
         private void PromptThrowBackFish() {
-            Response[] answerChoices = new[]
-            {
+
+            if (this.NumFishCaughtToday >= this.FishQuota) {
+
+                this.ThrowBackFish(Game1.player, "Yes");
+
+            } else {
+                String dialogue = "You have caught " + this.NumFishCaughtToday + " fish today.  You are permitted to catch 10 fish per day.  Throw it back?";
+
+                Response[] answerChoices = new[]
+                {
                     new Response("Yes", "Yes"),
                     new Response("No", "No")
                 };
 
-            Game1.currentLocation.createQuestionDialogue("Throw it back?", answerChoices, new GameLocation.afterQuestionBehavior(this.ThrowBackFish));
+                Game1.currentLocation.createQuestionDialogue(dialogue, answerChoices, new GameLocation.afterQuestionBehavior(this.ThrowBackFish));
+            }
+
+
         }
 
         /* ThrowBackFish
@@ -183,7 +224,13 @@ namespace FishingMod
                 }
                 this.ThrowFish(fish, who.getStandingPosition(), this.FishingDirection, (GameLocation)null, -1);
             } else if (whichAnswer == "No") {
-                
+
+                this.NumFishCaughtToday++;
+
+                if (this.NumFishCaughtToday == this.FishQuota) {
+                    this.Monitor.Log("You have reached the quota");
+                }
+
             }
         }
 
