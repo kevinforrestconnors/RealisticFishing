@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace RealisticFishing
 {
-    public class FishModel
+    public class FishModel : IComparable<FishModel>
     {
         public String Name;
         public int MinLength;
@@ -16,6 +16,11 @@ namespace RealisticFishing
             this.MinLength = minLength;
             this.MaxLength = maxLength;
             this.Length = length;
+        }
+
+        public int CompareTo(FishModel o)
+        {
+            return this.Length.CompareTo(o.Length);
         }
 
         public FishModel MakeBaby() {

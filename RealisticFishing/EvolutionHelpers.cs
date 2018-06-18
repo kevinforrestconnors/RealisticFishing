@@ -8,7 +8,7 @@ namespace RealisticFishing
 
         private static Random rand = new Random();
 
-        public static float MutationRate = 0.05f;
+        public static float MutationRate = 0.5f;
 
 
         public static double GetMutatedFishLength(double fishLength, int minLength, int maxLength) {

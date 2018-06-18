@@ -25,7 +25,7 @@ namespace RealisticFishing
             foreach (KeyValuePair<int, string> item in Game1.content.Load<Dictionary<int, string>>("Data\\Fish")) {
                 String[] fishFields = item.Value.Split('/');
 
-                if (fishFields[1] != "trap") {
+                if (fishFields[1] != "trap" && fishFields[0] != "Green Algae" && fishFields[0] != "White Algae" && fishFields[0] != "Seaweed") {
                     this.AllFish.Add(new Tuple<string, int, int>(fishFields[0], int.Parse(fishFields[3]), int.Parse(fishFields[4])));
                 }
             }
@@ -68,6 +68,18 @@ namespace RealisticFishing
             avg /= fishOfType.Count;
 
             return avg;
+        }
+
+        public bool IsAverageFishBelowValue(String fishName, double value = 0.66) {
+
+            double avgLength = this.GetAverageLengthOfFish(fishName);
+
+            List<FishModel> fishOfType;
+            this.population.TryGetValue(fishName, out fishOfType);
+
+            double originalPopulationAverage = (fishOfType[0].MinLength + fishOfType[0].MaxLength) / 2;
+                
+            return (avgLength / originalPopulationAverage) < value;
         }
 
         public String PrintChangedFish(List<String> filter) {
