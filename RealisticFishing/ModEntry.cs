@@ -122,23 +122,25 @@ namespace RealiticFishing
         }
 
         /* SaveEvents_AfterLoad
-        * Triggers after a save file is loaded.  Used to recover fields if the player has a mod like Save Anywhere.
+        * Triggers after a save file is loaded.
         */
         private void SaveEvents_AfterLoad(object sender, EventArgs e)
         {
-            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json");
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
 
             this.NumFishCaughtToday = instance.NumFishCaughtToday;
             this.AllFishCaughtToday = instance.AllFishCaughtToday;
             this.fp = instance.fp;
             this.population = instance.fp.population;
 
+            this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
+
             this.Monitor.Log("SaveEvents_AfterLoad: " + instance.fp.PrintChangedFish(new List<String>()));
 
         }
 
-        /* SaveEvents_AfterLoad
-        * Triggers before a save file is saved.  Used to save fields in case the player has a mod like Save Anywhere.
+        /* SaveEvents_BeforeSave
+        * Triggers before a save file is saved.
         */
         private void SaveEvents_BeforeSave(object sender, EventArgs e)
         {
@@ -240,7 +242,6 @@ namespace RealiticFishing
          */
         private void OnFishCaught(Item fish) {
             this.AllFishCaughtToday.Add(fish.Name);
-            this.RemoveFishFromOcean(fish);
         }
 
         /* RemoveFishFromOcean(Item fish)
@@ -296,19 +297,23 @@ namespace RealiticFishing
          * If whichAnswer == "Yes", removes the fish from the inventory and calls ThrowFish
          */
         private void ThrowBackFish(Farmer who, string whichAnswer) {
+
+            Item fish = this.FishCaught.getOne();
+
             if (whichAnswer == "Yes") {
 
-                Item fish = this.FishCaught.getOne();
-
                 this.FishCaught.Stack--;
+
                 if (this.FishCaught.Stack <= 0)
                 {
                     Game1.player.removeItemFromInventory(this.FishCaught);
                 }
                 this.ThrowFish(fish, who.getStandingPosition(), this.FishingDirection, (GameLocation)null, -1);
+
             } else if (whichAnswer == "No") {
 
                 this.NumFishCaughtToday++;
+                this.RemoveFishFromOcean(fish);
 
                 if (this.NumFishCaughtToday == this.FishQuota) {
                     this.Monitor.Log("You have reached the quota");
