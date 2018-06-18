@@ -45,13 +45,29 @@ namespace RealisticFishing
                     String name = this.AllFish[i].Item1;
                     int minLength = this.AllFish[i].Item2;
                     int maxLength = this.AllFish[i].Item3;
-                    double length = rand.NextDouble() * (maxLength - minLength) + minLength;
+                    double length = EvolutionHelpers.GetMutatedFishLength((maxLength + minLength) / 2, minLength, maxLength);
 
                     thisFishPopulation.Add(new FishModel(name, minLength, maxLength, length));
                 }
 
                 this.population.Add(this.AllFish[i].Item1, thisFishPopulation);
             } 
+        }
+
+        public double GetAverageLengthOfFish(String fishName) {
+            
+            List<FishModel> fishOfType;
+            this.population.TryGetValue(fishName, out fishOfType);
+
+            double avg = 0.0;
+
+            foreach (FishModel fish in fishOfType) {
+                avg += fish.Length;
+            }
+
+            avg /= fishOfType.Count;
+
+            return avg;
         }
 
         public String PrintChangedFish(List<String> filter) {
@@ -67,7 +83,7 @@ namespace RealisticFishing
 
                 if (fishOfType.Count > 0 && (filter.Contains(fishName) || filter.Count == 0)) 
                 {
-                    ret += fishOfType[0].Name + " | Number of Fish: " + fishOfType.Count + "\n";
+                    ret += fishOfType[0].Name + " | Number of Fish: " + fishOfType.Count + " | Average Length: " + this.GetAverageLengthOfFish(fishName) + "\n";
                 }
             }
 
