@@ -8,6 +8,7 @@ using StardewValley.Menus;
 using StardewValley.Tools;
 using RealisticFishing;
 using System.Collections.Generic;
+using Microsoft.Xna.Framework.Input;
 
 namespace RealiticFishing
 {
@@ -18,6 +19,8 @@ namespace RealiticFishing
         ** Properties
         *********/
         /// <summary>The mod configuration.</summary>
+        public bool ShouldRunTests = false;
+        public bool RunningTests = false;
 
         // Used to detect if the player is fishing.
         private SBobberBar Bobber;
@@ -31,21 +34,21 @@ namespace RealiticFishing
         private int FishingDirection;
 
         // The last fish caught.
-        private Item FishCaught;
+        public Item FishCaught;
 
         // The list of all fish caught today.
-        private List<String> AllFishCaughtToday;
+        public List<String> AllFishCaughtToday;
 
         // How many fish have been caught today.
-        private int NumFishCaughtToday;
+        public int NumFishCaughtToday;
 
         // How many fish the player can catch each day.
-        private int FishQuota = 10;
+        public int FishQuota = 10;
 
         // The class instance of the saved FishPopulation data
-        private FishPopulation fp;
+        public FishPopulation fp;
         // The population data structure
-        private Dictionary<String, List<FishModel>> population;
+        public Dictionary<String, List<FishModel>> population;
 
         /*********
         ** Public methods
@@ -62,6 +65,10 @@ namespace RealiticFishing
             SaveEvents.AfterCreate += this.SaveEvents_AfterCreate;
             SaveEvents.AfterLoad += this.SaveEvents_AfterLoad;
             SaveEvents.BeforeSave += this.SaveEvents_BeforeSave;
+
+            Tests.ModEntryInstance = this;
+
+            GameEvents.EighthUpdateTick += Tests.GameEvents_OnUpdateTickTests;
         }
 
         /*********
@@ -81,6 +88,7 @@ namespace RealiticFishing
          * Triggers at the beginning of each day.
          */
         private void TimeEvents_AfterDayStarted(object sender, EventArgs e) {
+
             List<String> changedFish = new List<String>();
 
             Random rand = new Random();
@@ -97,6 +105,12 @@ namespace RealiticFishing
                 fishOfType.Add(fishOfType[selectedFish].MakeBaby());
 
                 this.population[fishName] = fishOfType;
+            }
+
+            foreach (Tuple<String, int, int> fish in this.fp.AllFish) {
+                if (this.fp.IsAverageFishBelowValue(fish.Item1)) {
+                    this.OnFishAtCriticalLevel(fish.Item1);
+                }
             }
 
             this.NumFishCaughtToday = 0;
@@ -137,6 +151,7 @@ namespace RealiticFishing
 
             this.Monitor.Log("SaveEvents_AfterLoad: " + instance.fp.PrintChangedFish(new List<String>()));
 
+            this.RunningTests = true;
         }
 
         /* SaveEvents_BeforeSave
@@ -159,6 +174,7 @@ namespace RealiticFishing
          */
         private void GameEvents_OnUpdateTick(object sender, EventArgs e)
         {
+
             if (Game1.activeClickableMenu is BobberBar && this.Bobber != null) {
 
                 SBobberBar bobber = this.Bobber;
@@ -188,7 +204,9 @@ namespace RealiticFishing
          */
         private void ControlEvents_KeyPressed(object sender, EventArgsKeyPressed e)
         {
-
+            if (e.KeyPressed.Equals(Keys.O) && this.ShouldRunTests) {
+                this.RunningTests = !this.RunningTests;
+            }
         }
 
         /* PlayerEvents_InventoryChanged
@@ -244,18 +262,26 @@ namespace RealiticFishing
             this.AllFishCaughtToday.Add(fish.Name);
         }
 
+        private void OnFishAtCriticalLevel(String fishName) {
+            Monitor.Log("The average size of " + fishName + " has fallen to critical levels.");
+        }
+
         /* RemoveFishFromOcean(Item fish)
          * Removes one fish of type fish from the ocean at random.
          */
         private void RemoveFishFromOcean(Item fish) {
+            RemoveFishFromOcean(fish.Name);
+        }
+
+        private void RemoveFishFromOcean(String fishName) {
 
             // Prints the number of fish of this type before removing it
             List<String> changedFish = new List<String>();
-            changedFish.Add(fish.Name);
+            changedFish.Add(fishName);
             this.Monitor.Log("RemoveFishFromOcean: " + this.fp.PrintChangedFish(changedFish));
 
             List<FishModel> fishOfType;
-            this.population.TryGetValue(fish.Name, out fishOfType);
+            this.population.TryGetValue(fishName, out fishOfType);
 
             Random rand = new Random();
             int numFishOfType = fishOfType.Count;
