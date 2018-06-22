@@ -13,6 +13,9 @@ namespace RealisticFishing
 {
     public static class Tests
     {
+        
+        public static bool ShouldRunTests = false;
+        public static bool RunningTests = false;
 
         private static bool PopulationChangesBasedOnOverFishingCatchBiggestFishOnly = true;
 
@@ -21,7 +24,7 @@ namespace RealisticFishing
         public static ModEntry ModEntryInstance;
 
         public static void GameEvents_OnUpdateTickTests(object sender, EventArgs e) {
-            if (ModEntryInstance.RunningTests) {
+            if (Tests.RunningTests) {
                 Tests.PopulationChangesBasedOnOverFishing();  
             }
         }
