@@ -31,6 +31,7 @@ namespace RealiticFishing
         private bool BeganFishingGame = false;
         private bool EndedFishingGame = false;
         private bool JustFished = false;
+        private int JustFishedTimeout = 0;
 
         // Which direction the player was facing when they were fishing.  Used in ThrowFish.
         private int FishingDirection;
@@ -187,6 +188,15 @@ namespace RealiticFishing
         private void GameEvents_OnUpdateTick(object sender, EventArgs e)
         {
 
+            if (this.JustFishedTimeout == -1) {
+                // Do nothing
+            } else if (this.JustFishedTimeout == 1000) {
+                this.JustFished = false;
+                this.JustFishedTimeout = -1;
+            } else {
+                this.JustFishedTimeout++; 
+            }
+
             if (Game1.activeClickableMenu is BobberBar && this.Bobber != null) {
 
                 SBobberBar bobber = this.Bobber;
@@ -229,19 +239,27 @@ namespace RealiticFishing
          * If the player caught treasure, waits until the player gains the fish and this executes again when the player gains the fish.
          */
         private void PlayerEvents_InventoryChanged(object sender, EventArgsInventoryChanged e) {
-            if (this.JustFished) { // Player finished fishing, but may not have caught anything.
+
+            if (this.JustFished) { // Player finished fishing
 
                 this.JustFished = false;
 
-                if ((Game1.player.CurrentTool as FishingRod).treasureCaught) {
-                    this.JustFished = true;
-                    return;
-                } else if (e.Added.Count > 0) {
-                    this.FishCaught = e.Added[0].Item;
-                    this.OnFishCaught(this.FishCaught);
+                if (e.Added.Count > 0) {
+                    // Item.Category == -4 tests if item is a fish.
+                    if (e.Added[0].Item.Category == -4) {
+                        this.FishCaught = e.Added[0].Item;
+                        this.OnFishCaught(this.FishCaught);
+                    } else {
+                        return;
+                    }
                 } else if (e.QuantityChanged.Count > 0) {
-                    this.FishCaught = e.QuantityChanged[0].Item;
-                    this.OnFishCaught(this.FishCaught);
+                    // Item.Category == -4 tests if item is a fish.
+                    if (e.QuantityChanged[0].Item.Category == -4) {
+                        this.FishCaught = e.QuantityChanged[0].Item;
+                        this.OnFishCaught(this.FishCaught);
+                    } else {
+                        return;
+                    }
                 } else {
                     return;
                 }
@@ -255,6 +273,7 @@ namespace RealiticFishing
         * Put function calls here, not iterative style code.
         */
         private void OnFishingBegin() {
+            this.JustFished = false;
             this.Monitor.Log("Fishing has begun.");
             this.FishingDirection = Game1.player.FacingDirection;
         }
@@ -265,6 +284,7 @@ namespace RealiticFishing
          */
         private void OnFishingEnd() {
             this.Monitor.Log("Fishing has ended.");
+            this.JustFishedTimeout = 0;
             this.JustFished = true;
         }
 
