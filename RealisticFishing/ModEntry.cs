@@ -19,6 +19,8 @@ namespace RealiticFishing
         ** Properties
         *********/
         /// <summary>The mod configuration.</summary>
+        public static Random rand = new Random();
+         
         public bool ShouldRunTests = false;
         public bool RunningTests = false;
 
@@ -266,34 +268,12 @@ namespace RealiticFishing
             this.AllFishCaughtToday.Add(fish.Name);
         }
 
+        /* OnFishAtCriticalLevel
+         * Triggers when a population of fish with name <fishName> has average length 
+         *   1 standard deviation below the mean
+         */
         private void OnFishAtCriticalLevel(String fishName) {
             Monitor.Log("The average size of " + fishName + " has fallen to critical levels.");
-        }
-
-        /* RemoveFishFromOcean(Item fish)
-         * Removes one fish of type fish from the ocean at random.
-         */
-        private void RemoveFishFromOcean(Item fish) {
-            RemoveFishFromOcean(fish.Name);
-        }
-
-        private void RemoveFishFromOcean(String fishName) {
-
-            // Prints the number of fish of this type before removing it
-            List<String> changedFish = new List<String>();
-            changedFish.Add(fishName);
-            this.Monitor.Log("RemoveFishFromOcean: " + this.fp.PrintChangedFish(changedFish));
-
-            List<FishModel> fishOfType;
-            this.population.TryGetValue(fishName, out fishOfType);
-
-            Random rand = new Random();
-            int numFishOfType = fishOfType.Count;
-            int selectedFish = rand.Next(0, numFishOfType);
-
-            fishOfType.RemoveAt(selectedFish);
-
-            this.Monitor.Log("RemoveFishFromOcean: " + this.fp.PrintChangedFish(changedFish));
         }
 
 
@@ -318,8 +298,6 @@ namespace RealiticFishing
 
                 Game1.currentLocation.createQuestionDialogue(dialogue, answerChoices, new GameLocation.afterQuestionBehavior(this.ThrowBackFish));
             }
-
-
         }
 
         /* ThrowBackFish
@@ -350,6 +328,33 @@ namespace RealiticFishing
                 }
 
             }
+        }
+
+        /* RemoveFishFromOcean
+         * Removes a fish with name <fishName> from the fish population - <this.fp>
+         */
+        private void RemoveFishFromOcean(String fishName)
+        {
+
+            // Prints the number of fish of this type before removing it
+            List<String> changedFish = new List<String>();
+            changedFish.Add(fishName);
+            this.Monitor.Log("RemoveFishFromOcean: " + this.fp.PrintChangedFish(changedFish));
+
+            List<FishModel> fishOfType;
+            this.population.TryGetValue(fishName, out fishOfType);
+
+            int numFishOfType = fishOfType.Count;
+            int selectedFish = ModEntry.rand.Next(0, numFishOfType);
+
+            fishOfType.RemoveAt(selectedFish);
+
+            this.Monitor.Log("RemoveFishFromOcean: " + this.fp.PrintChangedFish(changedFish));
+        }
+
+        private void RemoveFishFromOcean(Item fish)
+        {
+            RemoveFishFromOcean(fish.Name);
         }
 
         /* ThrowFish
