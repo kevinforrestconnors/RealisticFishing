@@ -67,7 +67,10 @@ namespace RealiticFishing
 
             Tests.ModEntryInstance = this;
 
-            GameEvents.EighthUpdateTick += Tests.GameEvents_OnUpdateTickTests;
+            if (this.ShouldRunTests)
+            {
+                GameEvents.EighthUpdateTick += Tests.GameEvents_OnUpdateTickTests;
+            }
         }
 
         /*********
@@ -208,6 +211,7 @@ namespace RealiticFishing
             if (e.KeyPressed.Equals(Keys.O) && Tests.ShouldRunTests) {
                 Tests.RunningTests = !Tests.RunningTests;
             }
+
         }
 
         /* PlayerEvents_InventoryChanged

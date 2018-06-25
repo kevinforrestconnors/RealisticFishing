@@ -6,8 +6,9 @@ using StardewValley;
 
 namespace RealisticFishing
 {
-    public class FishModel : IComparable<FishModel>
+    public class FishModel : StardewValley.Object, IComparable<FishModel>
     {
+
         public string name;
         public int minLength;
         public int maxLength;
@@ -31,11 +32,6 @@ namespace RealisticFishing
 
         public FishModel MakeBaby() {
             return new FishModel(this.name, this.minLength, this.maxLength, EvolutionHelpers.GetMutatedFishLength(this.length, this.minLength, this.maxLength), this.quality);
-        }
-
-        public int CompareTo(object obj)
-        {
-            return length.CompareTo(obj);
         }
     }
 }
