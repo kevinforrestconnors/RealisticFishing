@@ -6,7 +6,7 @@ using StardewValley;
 
 namespace RealisticFishing
 {
-    public class FishModel : StardewValley.Object, IComparable<FishModel>
+    public class FishModel : IComparable<FishModel>
     {
 
         public string name;
