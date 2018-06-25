@@ -95,7 +95,7 @@ namespace RealisticFishing
 
                 if (fishOfType.Count > 0 && (filter.Contains(fishName) || filter.Count == 0)) 
                 {
-                    ret += fishOfType[0].Name + " | Number of Fish: " + fishOfType.Count + " | Average Length: " + this.GetAverageLengthOfFish(fishName) + "\n";
+                    ret += fishOfType[0].FishName + " | Number of Fish: " + fishOfType.Count + " | Average Length: " + this.GetAverageLengthOfFish(fishName) + "\n";
                 }
             }
 
