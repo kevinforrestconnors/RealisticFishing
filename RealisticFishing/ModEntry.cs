@@ -22,7 +22,7 @@ namespace RealiticFishing
         public static Random rand = new Random();
          
         public bool ShouldRunTests = false;
-        public bool RunningTests = false;
+        public bool RunningTests = false; 
 
         // Used to detect if the player is fishing.
         private SBobberBar Bobber;
@@ -113,7 +113,7 @@ namespace RealiticFishing
                 this.population[fishName] = fishOfType;
             }
 
-            foreach (Tuple<String, int, int> fish in this.fp.AllFish) {
+            foreach (Tuple<String, int, int, int> fish in this.fp.AllFish) {
                 if (this.fp.IsAverageFishBelowValue(fish.Item1)) {
                     this.OnFishAtCriticalLevel(fish.Item1);
                 }
@@ -159,7 +159,9 @@ namespace RealiticFishing
 
             this.Monitor.Log("SaveEvents_AfterLoad: " + instance.fp.PrintChangedFish(new List<String>()));
 
-            this.RunningTests = true;
+            if (Tests.ShouldRunTests) {
+                Tests.RunningTests = true;
+            }
         }
 
         /* SaveEvents_BeforeSave
@@ -215,8 +217,8 @@ namespace RealiticFishing
          */
         private void ControlEvents_KeyPressed(object sender, EventArgsKeyPressed e)
         {
-            if (e.KeyPressed.Equals(Keys.O) && this.ShouldRunTests) {
-                this.RunningTests = !this.RunningTests;
+            if (e.KeyPressed.Equals(Keys.O) && Tests.ShouldRunTests) {
+                Tests.RunningTests = !Tests.RunningTests;
             }
 
         }
@@ -282,7 +284,6 @@ namespace RealiticFishing
             Monitor.Log("The average size of " + fishName + " has fallen to critical levels.");
         }
 
-
         /* PromptThrowBackFish
          * Triggers every time the player catches a fish while they are still under the quota.
          * Calls ThrowBackFish as a callback to handle the choice made.
@@ -311,7 +312,7 @@ namespace RealiticFishing
          * If whichAnswer == "Yes", removes the fish from the inventory and calls ThrowFish
          */
         private void ThrowBackFish(Farmer who, string whichAnswer) {
-
+            
             Item fish = this.FishCaught.getOne();
 
             if (whichAnswer == "Yes") {
@@ -329,10 +330,23 @@ namespace RealiticFishing
                 this.NumFishCaughtToday++;
                 this.RemoveFishFromOcean(fish);
 
-                if (this.NumFishCaughtToday == this.FishQuota) {
-                    this.Monitor.Log("You have reached the quota");
-                }
+                Game1.player.removeItemFromInventory(this.FishCaught);
 
+                List<FishModel> fishOfType;
+                this.population.TryGetValue(fish.Name, out fishOfType);
+
+                int numFishOfType = fishOfType.Count;
+                int selectedFishIndex = ModEntry.rand.Next(0, numFishOfType);
+
+                FishModel selectedFish = fishOfType[selectedFishIndex];
+
+                Item customFish = (Item)new FishItem(fish.parentSheetIndex, fish.Name, selectedFish.minLength, selectedFish.maxLength, selectedFish.length, selectedFish.quality, 1);
+
+                Game1.player.addItemToInventory(customFish);
+
+                if (this.NumFishCaughtToday == this.FishQuota) {
+                    Game1.addHUDMessage(new HUDMessage("You have reached the fishing limit for today."));
+                }
             }
         }
 
