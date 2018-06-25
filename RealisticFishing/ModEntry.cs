@@ -19,8 +19,7 @@ namespace RealiticFishing
         ** Properties
         *********/
         /// <summary>The mod configuration.</summary>
-        public bool ShouldRunTests = false;
-        public bool RunningTests = false;
+        private Random rand = new Random();
 
         // Used to detect if the player is fishing.
         private SBobberBar Bobber;
@@ -110,7 +109,7 @@ namespace RealiticFishing
                 this.population[fishName] = fishOfType;
             }
 
-            foreach (Tuple<String, int, int> fish in this.fp.AllFish) {
+            foreach (Tuple<String, int, int, int> fish in this.fp.AllFish) {
                 if (this.fp.IsAverageFishBelowValue(fish.Item1)) {
                     this.OnFishAtCriticalLevel(fish.Item1);
                 }
@@ -154,7 +153,9 @@ namespace RealiticFishing
 
             this.Monitor.Log("SaveEvents_AfterLoad: " + instance.fp.PrintChangedFish(new List<String>()));
 
-            this.RunningTests = true;
+            if (Tests.ShouldRunTests) {
+                Tests.RunningTests = true;
+            }
         }
 
         /* SaveEvents_BeforeSave
@@ -207,8 +208,8 @@ namespace RealiticFishing
          */
         private void ControlEvents_KeyPressed(object sender, EventArgsKeyPressed e)
         {
-            if (e.KeyPressed.Equals(Keys.O) && this.ShouldRunTests) {
-                this.RunningTests = !this.RunningTests;
+            if (e.KeyPressed.Equals(Keys.O) && Tests.ShouldRunTests) {
+                Tests.RunningTests = !Tests.RunningTests;
             }
 
         }
@@ -266,6 +267,9 @@ namespace RealiticFishing
             this.AllFishCaughtToday.Add(fish.Name);
         }
 
+        /* OnFishAtCriticalLevel
+         * Triggers when the fish population of a specific fish falls below 1 std deviation in length from the mean
+         */
         private void OnFishAtCriticalLevel(String fishName) {
             Monitor.Log("The average size of " + fishName + " has fallen to critical levels.");
         }
@@ -287,11 +291,12 @@ namespace RealiticFishing
             List<FishModel> fishOfType;
             this.population.TryGetValue(fishName, out fishOfType);
 
-            Random rand = new Random();
             int numFishOfType = fishOfType.Count;
-            int selectedFish = rand.Next(0, numFishOfType);
+            int selectedFishIndex = this.rand.Next(0, numFishOfType);
 
-            fishOfType.RemoveAt(selectedFish);
+            FishModel selectedFish = fishOfType[selectedFishIndex];
+
+            fishOfType.RemoveAt(selectedFishIndex);
 
             this.Monitor.Log("RemoveFishFromOcean: " + this.fp.PrintChangedFish(changedFish));
         }
@@ -327,7 +332,7 @@ namespace RealiticFishing
          * If whichAnswer == "Yes", removes the fish from the inventory and calls ThrowFish
          */
         private void ThrowBackFish(Farmer who, string whichAnswer) {
-
+            
             Item fish = this.FishCaught.getOne();
 
             if (whichAnswer == "Yes") {
@@ -345,10 +350,23 @@ namespace RealiticFishing
                 this.NumFishCaughtToday++;
                 this.RemoveFishFromOcean(fish);
 
-                if (this.NumFishCaughtToday == this.FishQuota) {
-                    this.Monitor.Log("You have reached the quota");
-                }
+                Game1.player.removeItemFromInventory(this.FishCaught);
 
+                List<FishModel> fishOfType;
+                this.population.TryGetValue(fish.Name, out fishOfType);
+
+                int numFishOfType = fishOfType.Count;
+                int selectedFishIndex = this.rand.Next(0, numFishOfType);
+
+                FishModel selectedFish = fishOfType[selectedFishIndex];
+
+                Item customFish = (Item)new FishItem(fish.parentSheetIndex, fish.Name, selectedFish.minLength, selectedFish.maxLength, selectedFish.length, selectedFish.quality, 1);
+
+                Game1.player.addItemToInventory(customFish);
+
+                if (this.NumFishCaughtToday == this.FishQuota) {
+                    Game1.addHUDMessage(new HUDMessage("You have reached the fishing limit for today."));
+                }
             }
         }
 

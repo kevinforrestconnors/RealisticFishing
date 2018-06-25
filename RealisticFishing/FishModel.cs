@@ -1,30 +1,37 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using StardewValley;
 
 namespace RealisticFishing
 {
     public class FishModel : StardewValley.Object, IComparable<FishModel>
     {
-        public String FishName;
-        public int MinLength;
-        public int MaxLength;
-        public double Length;
 
-        public FishModel(String name, int minLength, int maxLength, double length)
+        public string name;
+        public int minLength;
+        public int maxLength;
+        public double length;
+
+        public int quality;
+
+        public FishModel(string name, int minLength, int maxLength, double length, int quality)
         {
-            this.FishName = name;
-            this.MinLength = minLength;
-            this.MaxLength = maxLength;
-            this.Length = length;
+            this.name = name;
+            this.minLength = minLength;
+            this.maxLength = maxLength;
+            this.length = length;
+            this.quality = quality;
         }
 
         public int CompareTo(FishModel o)
         {
-            return this.Length.CompareTo(o.Length);
+            return this.length.CompareTo(o.length);
         }
 
         public FishModel MakeBaby() {
-            return new FishModel(this.FishName, this.MinLength, this.MaxLength, EvolutionHelpers.GetMutatedFishLength(this.Length, this.MinLength, this.MaxLength));
+            return new FishModel(this.name, this.minLength, this.maxLength, EvolutionHelpers.GetMutatedFishLength(this.length, this.minLength, this.maxLength), this.quality);
         }
     }
 }

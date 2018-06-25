@@ -38,6 +38,7 @@
     <Compile Include="FishPopulation.cs" />
     <Compile Include="FishModel.cs" />
     <Compile Include="Tests.cs" />
+    <Compile Include="FishItem.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="manifest.json" />
