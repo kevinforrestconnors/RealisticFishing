@@ -82,6 +82,7 @@ namespace RealiticFishing
 
         /* GameEvents_OnUpdateTick
         * Triggers every time the menu changes.
+        * Handles the setup of the SBobberBar, used to detect if the player is fishing.
         */
         private void MenuEvents_MenuChanged(object sender, EventArgsClickableMenuChanged e)
         {
@@ -91,12 +92,12 @@ namespace RealiticFishing
 
         /* TimeEvents_AfterDayStarted
          * Triggers at the beginning of each day.
+         * Regenerates X fish, where X corresponds in number and type to the 
+         * fish that the player caught yesterday.
          */
         private void TimeEvents_AfterDayStarted(object sender, EventArgs e) {
 
             List<String> changedFish = new List<String>();
-
-            Random rand = new Random();
 
             foreach (String fishName in this.AllFishCaughtToday) {
                 changedFish.Add(fishName);
@@ -105,7 +106,7 @@ namespace RealiticFishing
                 this.population.TryGetValue(fishName, out fishOfType);
 
                 int numFishOfType = fishOfType.Count;
-                int selectedFish = rand.Next(0, numFishOfType);
+                int selectedFish = ModEntry.rand.Next(0, numFishOfType);
 
                 fishOfType.Add(fishOfType[selectedFish].MakeBaby());
 
@@ -125,7 +126,8 @@ namespace RealiticFishing
         }
 
         /* SaveEvents_AfterCreate
-         * Triggers after a save file is updated. Used to seed the population of fish.
+         * Triggers after a save file is updated. 
+         * Used to retrieve data and seed the population of fish.
          */
         private void SaveEvents_AfterCreate(object sender, EventArgs e) {
             RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
@@ -142,6 +144,7 @@ namespace RealiticFishing
 
         /* SaveEvents_AfterLoad
         * Triggers after a save file is loaded.
+        * Used to retrieve data and sometimes seed fish population.
         */
         private void SaveEvents_AfterLoad(object sender, EventArgs e)
         {
@@ -161,6 +164,7 @@ namespace RealiticFishing
 
         /* SaveEvents_BeforeSave
         * Triggers before a save file is saved.
+        * Used to serialize the data into the save file.
         */
         private void SaveEvents_BeforeSave(object sender, EventArgs e)
         {
@@ -175,7 +179,8 @@ namespace RealiticFishing
         }
 
         /* GameEvents_OnUpdateTick
-         * Triggers 60 times per second.  Use one of the methods here https://stardewvalleywiki.com/Modding:Modder_Guide/APIs/Events#Game for other time durations
+         * Triggers 60 times per second.  
+         * Use one of the methods here https://stardewvalleywiki.com/Modding:Modder_Guide/APIs/Events#Game for other time durations
          */
         private void GameEvents_OnUpdateTick(object sender, EventArgs e)
         {
@@ -206,6 +211,7 @@ namespace RealiticFishing
 
         /* ControlEvents_KeyPressed
          * Triggers every a key is pressed.
+         * Used to play/pause tests.
          */
         private void ControlEvents_KeyPressed(object sender, EventArgsKeyPressed e)
         {
