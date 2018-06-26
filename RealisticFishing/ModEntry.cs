@@ -30,8 +30,6 @@ namespace RealiticFishing
         // Handles the event handler logic.
         private bool BeganFishingGame = false;
         private bool EndedFishingGame = false;
-        private bool JustFished = false;
-        private int JustFishedTimeout = 0;
 
         // Which direction the player was facing when they were fishing.  Used in ThrowFish.
         private int FishingDirection;
@@ -53,6 +51,7 @@ namespace RealiticFishing
         // The population data structure
         public Dictionary<String, List<FishModel>> population;
 
+
         /*********
         ** Public methods
         *********/
@@ -61,6 +60,7 @@ namespace RealiticFishing
         public override void Entry(IModHelper helper)
         {
             MenuEvents.MenuChanged += this.MenuEvents_MenuChanged;
+            MenuEvents.MenuClosed += this.MenuEvents_MenuClosed;
             GameEvents.UpdateTick += this.GameEvents_OnUpdateTick;
             ControlEvents.KeyPressed += this.ControlEvents_KeyPressed;
             PlayerEvents.InventoryChanged += this.PlayerEvents_InventoryChanged;
@@ -87,8 +87,20 @@ namespace RealiticFishing
         */
         private void MenuEvents_MenuChanged(object sender, EventArgsClickableMenuChanged e)
         {
-            if (e.NewMenu is BobberBar menu)
+
+            this.Monitor.Log("Menu is now: " + e.NewMenu.ToString());
+
+            if (e.NewMenu is BobberBar menu) {
                 this.Bobber = SBobberBar.ConstructFromBaseClass(menu);
+            } 
+        }
+
+        /* GameEvents_OnUpdateTick
+        * Triggers every time the menu changes.
+        * Detects the treasure menu, allowing custom fish to be generated even if treasure is caught too.
+        */
+        private void MenuEvents_MenuClosed(object sender, EventArgsClickableMenuClosed e)
+        {
         }
 
         /* TimeEvents_AfterDayStarted
@@ -188,15 +200,6 @@ namespace RealiticFishing
         private void GameEvents_OnUpdateTick(object sender, EventArgs e)
         {
 
-            if (this.JustFishedTimeout == -1) {
-                // Do nothing
-            } else if (this.JustFishedTimeout == 1000) {
-                this.JustFished = false;
-                this.JustFishedTimeout = -1;
-            } else {
-                this.JustFishedTimeout++; 
-            }
-
             if (Game1.activeClickableMenu is BobberBar && this.Bobber != null) {
 
                 SBobberBar bobber = this.Bobber;
@@ -211,13 +214,10 @@ namespace RealiticFishing
                 this.OnFishingEnd();
                 this.EndedFishingGame = false;
 
-            } else {
-                
-                if (this.BeganFishingGame) {
+            } else if (this.BeganFishingGame) {
                     
-                    this.EndedFishingGame = true;
-                    this.BeganFishingGame = false;
-                }
+                this.EndedFishingGame = true;
+                this.BeganFishingGame = false;
             }
         }
 
@@ -240,60 +240,74 @@ namespace RealiticFishing
          */
         private void PlayerEvents_InventoryChanged(object sender, EventArgsInventoryChanged e) {
 
-            if (this.JustFished) { // Player finished fishing
+            if (e.Added.Count > 0) {
 
-                this.JustFished = false;
-
-                if (e.Added.Count > 0) {
-                    // Item.Category == -4 tests if item is a fish.
-                    if (e.Added[0].Item.Category == -4) {
-                        this.FishCaught = e.Added[0].Item;
-                        this.OnFishCaught(this.FishCaught);
-                    } else {
-                        return;
-                    }
-                } else if (e.QuantityChanged.Count > 0) {
-                    // Item.Category == -4 tests if item is a fish.
-                    if (e.QuantityChanged[0].Item.Category == -4) {
-                        this.FishCaught = e.QuantityChanged[0].Item;
-                        this.OnFishCaught(this.FishCaught);
-                    } else {
-                        return;
+                // Item.Category == -4 tests if item is a fish.
+                if (e.Added[0].Item.Category == -4) {
+                    if (!(e.Added[0].Item is FishItem)) {
+                        Game1.player.removeItemFromInventory(e.Added[0].Item);
                     }
                 } else {
                     return;
                 }
-
-                this.PromptThrowBackFish();
-            }
+            } else if (e.QuantityChanged.Count > 0) {
+                // Item.Category == -4 tests if item is a fish.
+                if (e.QuantityChanged[0].Item.Category == -4) {
+                    if (!(e.QuantityChanged[0].Item is FishItem))
+                    {
+                        Game1.player.removeItemFromInventory(e.QuantityChanged[0].Item);
+                    }
+                } else {
+                    return;
+                }
+            } 
         }
 
         /* OnFishingEnd
         * Triggers once when the fishing minigame starts.  
-        * Put function calls here, not iterative style code.
         */
         private void OnFishingBegin() {
-            this.JustFished = false;
             this.Monitor.Log("Fishing has begun.");
             this.FishingDirection = Game1.player.FacingDirection;
         }
 
         /* OnFishingEnd
          * Triggers once after the player catches a fish (not on trash)
-         * Put function calls here, not iterative style code.
          */
         private void OnFishingEnd() {
             this.Monitor.Log("Fishing has ended.");
-            this.JustFishedTimeout = 0;
-            this.JustFished = true;
-        }
 
-        /* OnFishCaught
-         * Triggers once after the player actually receives the fish in their inventory.
-         * Put function calls here, not iterative style code.
-         */
-        private void OnFishCaught(Item fish) {
-            this.AllFishCaughtToday.Add(fish.Name);
+
+            var rod = (Game1.player.CurrentTool as FishingRod);
+            int whichFish = this.Helper.Reflection.GetField<int>(rod, "whichFish").GetValue();
+
+            // construct a temporary fish item to figure out what the caught fish's name is
+            FishItem tempFish = new FishItem(whichFish, 0, 0, 0, 0);
+
+            this.Monitor.Log(whichFish.ToString());
+            this.Monitor.Log(tempFish.Name);
+
+            // get the list of fish in the Population with that name
+            List<FishModel> fishOfType;
+            this.population.TryGetValue(tempFish.Name, out fishOfType);
+
+            // get a random fish of that type from the population
+            int numFishOfType = fishOfType.Count;
+            int selectedFishIndex = ModEntry.rand.Next(0, numFishOfType);
+            FishModel selectedFish = fishOfType[selectedFishIndex];
+
+            // give the player a new custom fish item
+            Item customFish = (Item)new FishItem(whichFish, selectedFish.minLength, selectedFish.maxLength, selectedFish.length, selectedFish.quality);
+            Game1.player.addItemToInventory(customFish);
+            this.FishCaught = customFish;
+
+            // update the description.  this will affect fishing records too.
+            this.Helper.Reflection.GetField<int>(rod, "fishSize").SetValue((int)Math.Round(selectedFish.length));
+
+            // make sure it will be removed from the ocean at the end of the day
+            this.AllFishCaughtToday.Add(customFish.Name); // TODO make the fish removed from the ocean the same fish that was caught.
+
+            this.PromptThrowBackFish();
         }
 
         /* OnFishAtCriticalLevel
@@ -352,18 +366,6 @@ namespace RealiticFishing
 
                 Game1.player.removeItemFromInventory(this.FishCaught);
 
-                List<FishModel> fishOfType;
-                this.population.TryGetValue(fish.Name, out fishOfType);
-
-                int numFishOfType = fishOfType.Count;
-                int selectedFishIndex = ModEntry.rand.Next(0, numFishOfType);
-
-                FishModel selectedFish = fishOfType[selectedFishIndex];
-
-                Item customFish = (Item)new FishItem(fish.parentSheetIndex, fish.Name, selectedFish.minLength, selectedFish.maxLength, selectedFish.length, selectedFish.quality, 1);
-
-                Game1.player.addItemToInventory(customFish);
-
                 if (this.NumFishCaughtToday == this.FishQuota) {
                     Game1.addHUDMessage(new HUDMessage("You have reached the fishing limit for today."));
                 }
@@ -373,7 +375,7 @@ namespace RealiticFishing
         /* RemoveFishFromOcean
          * Removes a fish with name <fishName> from the fish population - <this.fp>
          */
-        private void RemoveFishFromOcean(String fishName)
+        private FishModel RemoveFishFromOcean(String fishName)
         {
 
             // Prints the number of fish of this type before removing it
@@ -390,6 +392,8 @@ namespace RealiticFishing
             fishOfType.RemoveAt(selectedFish);
 
             this.Monitor.Log("RemoveFishFromOcean: " + this.fp.PrintChangedFish(changedFish));
+
+            return fishOfType[selectedFish];
         }
 
         private void RemoveFishFromOcean(Item fish)
