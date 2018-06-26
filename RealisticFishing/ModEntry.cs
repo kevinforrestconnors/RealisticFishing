@@ -244,12 +244,14 @@ namespace RealiticFishing
 
                 // Item.Category == -4 tests if item is a fish.
                 if (e.Added[0].Item.Category == -4) {
+
                     if (!(e.Added[0].Item is FishItem)) {
                         Game1.player.removeItemFromInventory(e.Added[0].Item);
                     }
                 } else {
                     return;
                 }
+
             } else if (e.QuantityChanged.Count > 0) {
                 // Item.Category == -4 tests if item is a fish.
                 if (e.QuantityChanged[0].Item.Category == -4) {
@@ -283,9 +285,6 @@ namespace RealiticFishing
 
             // construct a temporary fish item to figure out what the caught fish's name is
             FishItem tempFish = new FishItem(whichFish, 0, 0, 0, 0);
-
-            this.Monitor.Log(whichFish.ToString());
-            this.Monitor.Log(tempFish.Name);
 
             // get the list of fish in the Population with that name
             List<FishModel> fishOfType;
@@ -363,8 +362,6 @@ namespace RealiticFishing
 
                 this.NumFishCaughtToday++;
                 this.RemoveFishFromOcean(fish);
-
-                Game1.player.removeItemFromInventory(this.FishCaught);
 
                 if (this.NumFishCaughtToday == this.FishQuota) {
                     Game1.addHUDMessage(new HUDMessage("You have reached the fishing limit for today."));
