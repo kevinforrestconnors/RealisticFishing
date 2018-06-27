@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using RealiticFishing;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
@@ -12,6 +13,8 @@ namespace RealisticFishing
 
     public class FishPopulation
     {
+
+        public static ModEntry ModEntryInstance;
 
         public Dictionary<String, List<FishModel>> population;
 
@@ -48,7 +51,8 @@ namespace RealisticFishing
                     int quality = this.AllFish[i].Item4;
                     double length = EvolutionHelpers.GetMutatedFishLength((maxLength + minLength) / 2, minLength, maxLength);
 
-                    thisFishPopulation.Add(new FishModel(name, minLength, maxLength, length, quality));
+                    thisFishPopulation.Add(new FishModel(ModEntryInstance.CurrentFishIDCounter, name, minLength, maxLength, length, quality));
+                    ModEntryInstance.CurrentFishIDCounter++;
                 }
 
                 this.population.Add(this.AllFish[i].Item1, thisFishPopulation);

@@ -11,30 +11,20 @@ namespace RealisticFishing
     public class FishItem : StardewValley.Object
     {
         public int Id;
-        public int MinLength;
-        public int MaxLength;
-        public double Length;
-        public int DisplayLength;
+        public List<FishModel> FishStack = new List<FishModel>();
 
         public String Description;
 
-        public FishItem(int id, int minLength, int maxLength, double length, int quality) 
-            : base(id, 1, false, -1, quality)
+        public FishItem(int id, FishModel fish) 
+            : base(id, 1, false, -1, fish.quality)
         {
             this.Id = id;
-            this.MinLength = minLength;
-            this.MaxLength = maxLength;
-            this.Length = length;
-            this.DisplayLength = (int)Math.Round(this.Length);
-            this.Quality = quality;
-            this.Description = base.getDescription();
-            this.Category = -4;
+            this.FishStack.Add(fish);
 
-            // Allows the item to be sold
-            // TODO: THIS
+            this.Description = base.getDescription();
 
             // Changes the price to scale off length
-            this.Price = (int)(base.Price * (this.DisplayLength / 5));
+            this.Price = (int)Math.Round((base.Price * (this.FishStack[this.FishStack.Count - 1].length) / 5));
         }
 
         public override void drawInMenu(SpriteBatch spriteBatch, Vector2 location, float scaleSize, float transparency, float layerDepth, bool drawStackNumber, Color color, bool drawShadow)
@@ -43,17 +33,50 @@ namespace RealisticFishing
         }
 
         public override Item getOne() {
-            return (Item)new FishItem(this.Id, this.MinLength, this.MaxLength, this.Length, this.Quality);
+            FishItem one = new FishItem(this.Id, this.FishStack[this.FishStack.Count - 1]);
+            one.Price = (int)Math.Round((base.Price * (this.FishStack[0].length / 5)));
+            return (Item)one;
         }
 
         public override string getDescription()
         {
-            return this.Description + " " + this.DisplayLength.ToString() + " in. long.";
+            string lengths = "";
+
+            int count = 0;
+            int max = 5;
+
+            this.FishStack.Reverse();
+
+            foreach (FishModel fish in this.FishStack) {
+                lengths += ((int)Math.Round(fish.length)).ToString() + "\n";
+                count++;
+
+                if (count == max) {
+                    break;
+                }
+            }
+
+            this.FishStack.Reverse();
+
+            if (count == max) {
+                return this.Description + "\nThis stack contains " + this.Name + " of length: \n" + lengths + "\n...(truncated)";
+            } else {
+                return this.Description + "\nThis stack contains " + this.Name + " of length: \n" + lengths;   
+            }
         }
 
         public override int salePrice()
         {
-            return base.salePrice();
+            double p = 0;
+
+            foreach (FishModel fish in this.FishStack)
+            {
+                p += base.Price * (fish.length / 5);
+            }
+
+            p /= this.FishStack.Count;
+
+            return (int)Math.Round(p);
         }
 
         public override bool canStackWith(Item other)
