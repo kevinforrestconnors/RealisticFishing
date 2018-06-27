@@ -9,6 +9,7 @@ using StardewValley.Tools;
 using RealisticFishing;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
+using StardewValley.Minigames;
 
 namespace RealiticFishing
 {
@@ -30,12 +31,17 @@ namespace RealiticFishing
         // Handles the event handler logic.
         private bool BeganFishingGame = false;
         private bool EndedFishingGame = false;
+        private bool PlayerReceivedFish = false;
+        private int whichFish;
 
         // Which direction the player was facing when they were fishing.  Used in ThrowFish.
         private int FishingDirection;
 
         // The last fish caught.
         public Item FishCaught;
+
+        // The FishingRod information
+        public bool fishWasCaught = false;
 
         // The list of Tuple<name, uniqueID> of all the fish caught today. 
         public List<Tuple<string, int>> AllFishCaughtToday;
@@ -51,7 +57,7 @@ namespace RealiticFishing
         // The population data structure
         public Dictionary<String, List<FishModel>> population;
 
-        public int CurrentFishIDCounter;
+        public static List<FishItem> FishItemsRecentlyAdded = new List<FishItem>();
 
         public delegate void RemoveFishFromOcean(Farmer who, string whichAnswer);
 
@@ -150,12 +156,12 @@ namespace RealiticFishing
          */
         private void SaveEvents_AfterCreate(object sender, EventArgs e) {
             RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
-
-            this.CurrentFishIDCounter = instance.FishIDCounter;
+      
             this.NumFishCaughtToday = instance.NumFishCaughtToday;
             this.AllFishCaughtToday = instance.AllFishCaughtToday;
             this.fp = instance.fp;
             this.population = instance.fp.population;
+            this.fp.CurrentFishIDCounter = instance.CurrentFishIDCounter;
 
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
 
@@ -170,11 +176,11 @@ namespace RealiticFishing
         {
             RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
 
-            this.CurrentFishIDCounter = instance.FishIDCounter;
             this.NumFishCaughtToday = instance.NumFishCaughtToday;
             this.AllFishCaughtToday = instance.AllFishCaughtToday;
             this.fp = instance.fp;
             this.population = instance.fp.population;
+            this.fp.CurrentFishIDCounter = instance.CurrentFishIDCounter;
 
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
 
@@ -192,11 +198,12 @@ namespace RealiticFishing
         private void SaveEvents_BeforeSave(object sender, EventArgs e)
         {
             RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json");
-            instance.FishIDCounter = this.CurrentFishIDCounter;
+
             instance.NumFishCaughtToday = this.NumFishCaughtToday;
             instance.AllFishCaughtToday = this.AllFishCaughtToday;
             instance.fp = this.fp;
             instance.population = this.fp.population;
+            instance.CurrentFishIDCounter = this.fp.CurrentFishIDCounter;
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
 
             this.Monitor.Log("BeforeSave: " + instance.fp.PrintChangedFish(new List<String>()));
@@ -209,12 +216,58 @@ namespace RealiticFishing
         private void GameEvents_OnUpdateTick(object sender, EventArgs e)
         {
 
+            if (Game1.player.CurrentTool is FishingRod)
+            {
+
+                var rod = Game1.player.CurrentTool as FishingRod;
+
+                if (rod.fishCaught && !this.PlayerReceivedFish)
+                {
+
+                    // Prevents the mod from giving the player 1 fish per tick ;)
+                    this.PlayerReceivedFish = true;
+
+                    this.whichFish = this.Helper.Reflection.GetField<int>(rod, "whichFish").GetValue();
+
+                    // construct a temporary fish item to figure out what the caught fish's name is
+                    FishItem tempFish = new FishItem(this.whichFish);
+
+                    if (tempFish.Category == -4) { // is a fish
+                        
+                        // get the list of fish in the Population with that name
+                        List<FishModel> fishOfType;
+                        this.population.TryGetValue(tempFish.Name, out fishOfType);
+
+                        // get a random fish of that type from the population
+                        int numFishOfType = fishOfType.Count;
+                        int selectedFishIndex = ModEntry.rand.Next(0, numFishOfType);
+                        FishModel selectedFish = fishOfType[selectedFishIndex];
+
+                        this.Helper.Reflection.GetField<int>(rod, "fishSize").SetValue((int)Math.Round(selectedFish.length));
+
+                        // store a new custom fish item
+                        Item customFish = (Item)new FishItem(this.whichFish, selectedFish);
+                        Game1.player.addItemToInventory(customFish);
+                        this.FishCaught = customFish;
+                        FishItem.lastFishAddedToInventory = selectedFish;
+
+                        // make sure the fish in the ocean will be regenerated at the end of the day
+                        this.AllFishCaughtToday.Add(new Tuple<string, int>(selectedFish.name, selectedFish.uniqueID));
+
+                        // Prompt the player to throw back the fish
+                        this.PromptThrowBackFish(selectedFish.name, selectedFish.uniqueID);  
+                    }
+                }
+            }
+
+
             if (Game1.activeClickableMenu is BobberBar && this.Bobber != null) {
 
                 SBobberBar bobber = this.Bobber;
 
                 if (!this.BeganFishingGame) {
                     this.OnFishingBegin();
+                    this.PlayerReceivedFish = false;
                     this.BeganFishingGame = true;
                 }
 
@@ -256,6 +309,8 @@ namespace RealiticFishing
 
                     if (!(e.Added[0].Item is FishItem)) {
                         Game1.player.removeItemFromInventory(e.Added[0].Item);
+                    } else {
+                        ModEntry.FishItemsRecentlyAdded.Add(e.Added[0].Item as FishItem);
                     }
                 } else {
                     return;
@@ -267,6 +322,8 @@ namespace RealiticFishing
                     if (!(e.QuantityChanged[0].Item is FishItem))
                     {
                         Game1.player.removeItemFromInventory(e.QuantityChanged[0].Item);
+                    } else {
+                        ModEntry.FishItemsRecentlyAdded.Add(e.QuantityChanged[0].Item as FishItem);
                     }
                 } else {
                     return;
@@ -286,43 +343,7 @@ namespace RealiticFishing
          * Triggers once after the player catches a fish (not on trash)
          */
         private void OnFishingEnd() {
-            
             this.Monitor.Log("Fishing has ended.");
-                
-            var rod = (Game1.player.CurrentTool as FishingRod);
-
-            bool fishCaught = this.Helper.Reflection.GetField<bool>(rod, "fishCaught").GetValue();
-
-            if (fishCaught) {
-                
-                int whichFish = this.Helper.Reflection.GetField<int>(rod, "whichFish").GetValue();
-
-                // construct a temporary fish item to figure out what the caught fish's name is
-                FishItem tempFish = new FishItem(whichFish, new FishModel(-1, "", 0, 0, 0, 0));
-
-                // get the list of fish in the Population with that name
-                List<FishModel> fishOfType;
-                this.population.TryGetValue(tempFish.Name, out fishOfType);
-
-                // get a random fish of that type from the population
-                int numFishOfType = fishOfType.Count;
-                int selectedFishIndex = ModEntry.rand.Next(0, numFishOfType);
-                FishModel selectedFish = fishOfType[selectedFishIndex];
-
-                // give the player a new custom fish item
-                Item customFish = (Item)new FishItem(whichFish, selectedFish);
-                Game1.player.addItemToInventory(customFish);
-                this.FishCaught = customFish;
-
-                // update the description.  this will affect fishing records too.
-                this.Helper.Reflection.GetField<int>(rod, "fishSize").SetValue((int)Math.Round(selectedFish.length));
-
-                // make sure it will be regenerated at the end of the day
-                this.AllFishCaughtToday.Add(new Tuple<string, int>(selectedFish.name, selectedFish.uniqueID));
-
-                // Prompt the player to throw back the fish
-                this.PromptThrowBackFish(selectedFish.name, selectedFish.uniqueID);
-            }
         }
 
         /* OnFishAtCriticalLevel

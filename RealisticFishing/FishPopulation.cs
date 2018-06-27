@@ -13,15 +13,15 @@ namespace RealisticFishing
 
     public class FishPopulation
     {
-
-        public static ModEntry ModEntryInstance;
-
+        
+        public int CurrentFishIDCounter;
         public Dictionary<String, List<FishModel>> population;
-
         public List<Tuple<String, int, int, int>> AllFish;
 
         public FishPopulation()
         {
+
+            this.CurrentFishIDCounter = 0;
 
             this.AllFish = new List<Tuple<String, int, int, int>>();
 
@@ -48,11 +48,24 @@ namespace RealisticFishing
                     String name = this.AllFish[i].Item1;
                     int minLength = this.AllFish[i].Item2;
                     int maxLength = this.AllFish[i].Item3;
-                    int quality = this.AllFish[i].Item4;
+
+                    int quality;
+                    double r = rand.NextDouble();
+
+                    if (r > 0.99) {
+                        quality = 4;
+                    } else if (r > 0.95) {
+                        quality = 2;
+                    } else if (r > 0.85) {
+                        quality = 1;
+                    } else {
+                        quality = 0;
+                    }
+
                     double length = EvolutionHelpers.GetMutatedFishLength((maxLength + minLength) / 2, minLength, maxLength);
 
-                    thisFishPopulation.Add(new FishModel(ModEntryInstance.CurrentFishIDCounter, name, minLength, maxLength, length, quality));
-                    ModEntryInstance.CurrentFishIDCounter++;
+                    thisFishPopulation.Add(new FishModel(this.CurrentFishIDCounter, name, minLength, maxLength, length, quality));
+                    this.CurrentFishIDCounter++;
                 }
 
                 this.population.Add(this.AllFish[i].Item1, thisFishPopulation);
