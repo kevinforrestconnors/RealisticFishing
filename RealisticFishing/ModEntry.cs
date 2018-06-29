@@ -59,6 +59,7 @@ namespace RealiticFishing
 
         public static List<FishItem> FishItemsRecentlyAdded = new List<FishItem>();
 
+        public bool inventoryWasReconstructed = false;
 
         /*********
         ** Public methods
@@ -76,6 +77,7 @@ namespace RealiticFishing
             SaveEvents.AfterCreate += this.SaveEvents_AfterCreate;
             SaveEvents.AfterLoad += this.SaveEvents_AfterLoad;
             SaveEvents.BeforeSave += this.SaveEvents_BeforeSave;
+            SaveEvents.AfterSave += this.SaveEvents_AfterSave;
 
             Tests.ModEntryInstance = this;
 
@@ -152,7 +154,10 @@ namespace RealiticFishing
          * Triggers after a save file is updated. 
          * Used to retrieve data and seed the population of fish.
          */
-        private void SaveEvents_AfterCreate(object sender, EventArgs e) {
+        private void SaveEvents_AfterCreate(object sender, EventArgs e) 
+        {
+            this.Monitor.Log("SaveEvents_AfterLoad");
+
             RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
       
             this.NumFishCaughtToday = instance.NumFishCaughtToday;
@@ -172,6 +177,8 @@ namespace RealiticFishing
         */
         private void SaveEvents_AfterLoad(object sender, EventArgs e)
         {
+            this.Monitor.Log("SaveEvents_AfterLoad");
+
             RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
 
             this.NumFishCaughtToday = instance.NumFishCaughtToday;
@@ -179,6 +186,25 @@ namespace RealiticFishing
             this.fp = instance.fp;
             this.population = instance.fp.population;
             this.fp.CurrentFishIDCounter = instance.CurrentFishIDCounter;
+
+            if (!this.inventoryWasReconstructed) {
+
+                this.inventoryWasReconstructed = true;
+
+                foreach (Tuple<int, List<FishModel>> f in instance.inventory)
+                {
+                    int id = f.Item1;
+                    var fishStack = f.Item2;
+
+                    var itemToBeAdded = new FishItem(id, fishStack[0])
+                    {
+                        Stack = fishStack.Count,
+                        FishStack = fishStack
+                    };
+
+                    itemToBeAdded.AddToInventory();
+                }
+            }
 
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
 
@@ -202,7 +228,8 @@ namespace RealiticFishing
             instance.fp = this.fp;
             instance.population = this.fp.population;
             instance.CurrentFishIDCounter = this.fp.CurrentFishIDCounter;
-            this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
+
+            instance.inventory.Clear();
 
             for (int index = 0; index < Game1.player.maxItems; ++index)
             {
@@ -210,12 +237,44 @@ namespace RealiticFishing
                 {
                     Item item = Game1.player.items[index];
                     if (item is FishItem) {
+                        instance.inventory.Add(new Tuple<int, List<FishModel>>(item.parentSheetIndex, (item as FishItem).FishStack));
                         Game1.player.removeItemFromInventory(item);
                     }
                 }
             }
 
+            this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
+
+            this.inventoryWasReconstructed = false;
+
             this.Monitor.Log("BeforeSave: " + instance.fp.PrintChangedFish(new List<String>()));
+        }
+
+        private void SaveEvents_AfterSave(object sender, EventArgs e)
+        {
+            this.Monitor.Log("SaveEvents_AfterSave");
+
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
+
+            if (!this.inventoryWasReconstructed)
+            {
+
+                this.inventoryWasReconstructed = true;
+
+                foreach (Tuple<int, List<FishModel>> f in instance.inventory)
+                {
+                    int id = f.Item1;
+                    var fishStack = f.Item2;
+
+                    var itemToBeAdded = new FishItem(id, fishStack[0])
+                    {
+                        Stack = fishStack.Count,
+                        FishStack = fishStack
+                    };
+
+                    itemToBeAdded.AddToInventory();
+                }
+            }
         }
 
         /* GameEvents_OnUpdateTick
@@ -285,7 +344,7 @@ namespace RealiticFishing
                 this.OnFishingEnd();
                 this.EndedFishingGame = false;
 
-            } else if (this.BeganFishingGame) {
+            } else if (this.BeganFishingGame) {{}
                     
                 this.EndedFishingGame = true;
                 this.BeganFishingGame = false;

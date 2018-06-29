@@ -36,8 +36,6 @@ namespace RealisticFishing
             if (FishItem.lastFishAddedToInventory != null) {
                 this.FishStack.Add(FishItem.lastFishAddedToInventory);
                 ModEntry.FishItemsRecentlyAdded.Clear();
-            } else {
-                throw new MissingMemberException();
             }
         }
 
