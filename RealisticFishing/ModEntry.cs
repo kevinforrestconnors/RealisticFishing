@@ -246,10 +246,10 @@ namespace RealiticFishing
                         this.Helper.Reflection.GetField<int>(rod, "fishSize").SetValue((int)Math.Round(selectedFish.length));
 
                         // store a new custom fish item
-                        Item customFish = (Item)new FishItem(this.whichFish, selectedFish);
-                        Game1.player.addItemToInventory(customFish);
-                        this.FishCaught = customFish;
                         FishItem.lastFishAddedToInventory = selectedFish;
+                        Item customFish = (Item)new FishItem(this.whichFish, selectedFish);
+                        ((FishItem)customFish).AddToInventory();
+                        this.FishCaught = customFish;
 
                         // make sure the fish in the ocean will be regenerated at the end of the day
                         this.AllFishCaughtToday.Add(new Tuple<string, int>(selectedFish.name, selectedFish.uniqueID));
@@ -391,12 +391,20 @@ namespace RealiticFishing
          * If whichAnswer == "Yes", removes the fish from the inventory and calls ThrowFish
          */
         private bool ThrowBackFish(Farmer who, string whichAnswer) {
-            
-            Item fish = this.FishCaught.getOne();
 
             if (whichAnswer == "Yes") {
 
+                Item fish = this.FishCaught.getOne();
+
+                if (this.AllFishCaughtToday.Count > 0) {
+                    this.AllFishCaughtToday.RemoveAt(this.AllFishCaughtToday.Count - 1);
+                }
+
                 this.FishCaught.Stack--;
+
+                if ((this.FishCaught as FishItem).FishStack.Count > 0) {
+                    (this.FishCaught as FishItem).FishStack.RemoveAt((this.FishCaught as FishItem).FishStack.Count - 1);
+                }
 
                 if (this.FishCaught.Stack <= 0)
                 {

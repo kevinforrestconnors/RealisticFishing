@@ -18,14 +18,59 @@ namespace RealisticFishing
 
         public String Description;
 
-        public FishItem(int id) : base(id, 0, false, -1, 0) {}
-
-        public FishItem(int id, FishModel fish) 
-            : base(id, 0, false, -1, fish.quality)
+        public FishItem(int id) 
+            : base(id, 1, false, -1, 1) 
         {
             this.Id = id;
             this.Description = base.getDescription();
-            this.FishStack.Add(FishItem.lastFishAddedToInventory);
+            this.FishStack.Add(new FishModel(-1, this.Name, -1, -1, 0, 1));
+        }
+
+        public FishItem(int id, FishModel fish) 
+            : base(id, 1, false, -1, fish.quality)
+        {
+            this.Id = id;
+            this.Description = base.getDescription();
+
+            if (FishItem.lastFishAddedToInventory != null) {
+                this.FishStack.Add(FishItem.lastFishAddedToInventory);
+                ModEntry.FishItemsRecentlyAdded.Clear();
+            } else {
+                throw new MissingMemberException();
+            }
+        }
+
+        public Item AddToInventory()
+        {
+            Item item = this;
+
+            if (item == null)
+                return (Item)null;
+            if (item is SpecialItem)
+                return item;
+            for (int index = 0; index < (int)(Game1.player.maxItems); ++index)
+            {
+                if (index < Game1.player.items.Count && Game1.player.items[index] != null && (Game1.player.items[index].maximumStackSize() != -1 && Game1.player.items[index].getStack() < Game1.player.items[index].maximumStackSize()) && Game1.player.items[index].Name.Equals(item.Name) && ((!(item is StardewValley.Object) || !(Game1.player.items[index] is StardewValley.Object) || (item as StardewValley.Object).quality.Value == (Game1.player.items[index] as StardewValley.Object).quality.Value && (item as StardewValley.Object).parentSheetIndex.Value == (Game1.player.items[index] as StardewValley.Object).parentSheetIndex.Value) && item.canStackWith(Game1.player.items[index])))
+                {
+                    Tests.ModEntryInstance.Monitor.Log("First for loop");
+                    int stack = Game1.player.items[index].addToStack(item.getStack());
+                    if (stack <= 0)
+                        return (Item)null;
+                    item.Stack = stack;
+                }
+            }
+            for (int index = 0; index < (int)(Game1.player.maxItems); ++index)
+            {
+                
+
+                if (Game1.player.items.Count > index && Game1.player.items[index] == null)
+                {
+                    Tests.ModEntryInstance.Monitor.Log("Second for loop");
+                    Game1.player.items[index] = item;
+                    return (Item)null;
+                }
+            }
+            return item;
         }
 
         public override void drawInMenu(SpriteBatch spriteBatch, Vector2 location, float scaleSize, float transparency, float layerDepth, bool drawStackNumber, Color color, bool drawShadow)
@@ -34,9 +79,16 @@ namespace RealisticFishing
         }
 
         public override Item getOne() {
-            FishItem one = new FishItem(this.Id, this.FishStack[this.FishStack.Count - 1]);
-            one.Price = (int)Math.Round((base.Price * (this.FishStack[0].length / 5)));
-            return (Item)one;
+            
+            if (this.FishStack.Count > 0) {
+                FishModel topFish = this.FishStack[this.FishStack.Count - 1];
+                FishItem one = new FishItem(this.Id, topFish);
+                one.Price = (int)Math.Round((base.Price * (topFish.length / 5)));
+                return (Item)one;
+            } else {
+                Tests.ModEntryInstance.Monitor.Log("Something went wrong!");
+                throw new MissingMemberException();
+            }
         }
 
         public override string getDescription()
@@ -70,13 +122,13 @@ namespace RealisticFishing
             }
         }
 
-        public override int salePrice()
+        public override int sellToStorePrice()
         {
             double p = 0;
 
             foreach (FishModel fish in this.FishStack)
             {
-                p += base.Price * (fish.length / 5);
+                p += base.Price * (fish.length / 5) * fish.quality;
             }
 
             p /= this.FishStack.Count;
