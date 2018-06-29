@@ -59,8 +59,6 @@ namespace RealiticFishing
 
         public static List<FishItem> FishItemsRecentlyAdded = new List<FishItem>();
 
-        public delegate void RemoveFishFromOcean(Farmer who, string whichAnswer);
-
 
         /*********
         ** Public methods
@@ -205,6 +203,17 @@ namespace RealiticFishing
             instance.population = this.fp.population;
             instance.CurrentFishIDCounter = this.fp.CurrentFishIDCounter;
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
+
+            for (int index = 0; index < Game1.player.maxItems; ++index)
+            {
+                if (index < Game1.player.items.Count && Game1.player.items[index] != null)
+                {
+                    Item item = Game1.player.items[index];
+                    if (item is FishItem) {
+                        Game1.player.removeItemFromInventory(item);
+                    }
+                }
+            }
 
             this.Monitor.Log("BeforeSave: " + instance.fp.PrintChangedFish(new List<String>()));
         }
@@ -362,6 +371,7 @@ namespace RealiticFishing
 
             if (this.NumFishCaughtToday >= this.FishQuota) {
 
+                // TODO add delegate
                 this.ThrowBackFish(Game1.player, "Yes");
 
             } else {

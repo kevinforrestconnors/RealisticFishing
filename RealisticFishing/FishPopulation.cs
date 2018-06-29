@@ -88,6 +88,7 @@ namespace RealisticFishing
             return avg;
         }
 
+        // todo choose better # for value
         public bool IsAverageFishBelowValue(String fishName, double value = 0.66) {
 
             double avgLength = this.GetAverageLengthOfFish(fishName);

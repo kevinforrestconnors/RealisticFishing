@@ -5,10 +5,11 @@ using Microsoft.Xna.Framework.Graphics;
 using RealiticFishing;
 using StardewValley;
 using StardewValley.Objects;
-using StardewValley.Tools;
+
 
 namespace RealisticFishing
 {
+
     public class FishItem : StardewValley.Object
     {
         public int Id;
@@ -83,7 +84,7 @@ namespace RealisticFishing
             if (this.FishStack.Count > 0) {
                 FishModel topFish = this.FishStack[this.FishStack.Count - 1];
                 FishItem one = new FishItem(this.Id, topFish);
-                one.Price = (int)Math.Round((base.Price * (topFish.length / 5)));
+                one.Price = (int)Math.Round((base.Price * (topFish.length / 5) * topFish.quality));
                 return (Item)one;
             } else {
                 Tests.ModEntryInstance.Monitor.Log("Something went wrong!");
