@@ -61,7 +61,6 @@ namespace RealisticFishing
             for (int index = 0; index < (int)(Game1.player.maxItems); ++index)
             {
                 
-
                 if (Game1.player.items.Count > index && Game1.player.items[index] == null)
                 {
                     Tests.ModEntryInstance.Monitor.Log("Second for loop");
@@ -104,7 +103,13 @@ namespace RealisticFishing
             this.FishStack.Reverse();
 
             foreach (FishModel fish in this.FishStack) {
-                lengths += ((int)Math.Round(fish.length)).ToString() + ", ";
+
+                if (count == 0) {
+                    lengths += ((int)Math.Round(fish.length)).ToString();
+                } else {
+                    lengths += ", " + ((int)Math.Round(fish.length)).ToString();
+                }
+
                 count++;
 
                 if (count == max) {

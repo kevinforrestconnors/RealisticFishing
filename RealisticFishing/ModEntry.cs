@@ -391,7 +391,18 @@ namespace RealiticFishing
                     {
                         Game1.player.removeItemFromInventory(e.QuantityChanged[0].Item);
                     } else {
-                        ModEntry.FishItemsRecentlyAdded.Add(e.QuantityChanged[0].Item as FishItem);
+
+                        if (e.QuantityChanged[0].StackChange > 0) {
+                            ModEntry.FishItemsRecentlyAdded.Add(e.QuantityChanged[0].Item as FishItem);
+                        } else {
+
+                            int numRemoved = e.QuantityChanged[0].StackChange;
+                            var item = (e.QuantityChanged[0].Item as FishItem);
+
+                            if (e.QuantityChanged[0].Item.Stack < 0) {
+                                item.FishStack.RemoveRange(item.FishStack.Count - numRemoved - 1, numRemoved);
+                            }
+                        }
                     }
                 } else {
                     return;
