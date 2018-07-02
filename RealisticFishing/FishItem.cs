@@ -158,7 +158,7 @@ namespace RealisticFishing
 
         public override bool canStackWith(Item other)
         {
-            return base.canStackWith(other);
+            return base.canStackWith(other) && other is FishItem;
         }
     }
 }

@@ -389,7 +389,7 @@ namespace RealiticFishing
                 if (e.QuantityChanged[0].Item.Category == -4) {
                     if (!(e.QuantityChanged[0].Item is FishItem))
                     {
-                        Game1.player.removeItemFromInventory(e.QuantityChanged[0].Item);
+                        e.QuantityChanged[0].Item.Stack -= e.QuantityChanged[0].StackChange;
                     } else {
 
                         if (e.QuantityChanged[0].StackChange > 0) {
