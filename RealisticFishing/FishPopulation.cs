@@ -29,7 +29,7 @@ namespace RealisticFishing
                 String[] fishFields = item.Value.Split('/');
 
                 if (fishFields[1] != "trap" && fishFields[0] != "Green Algae" && fishFields[0] != "White Algae" && fishFields[0] != "Seaweed") {
-                    this.AllFish.Add(new Tuple<string, int, int, int>(fishFields[0], int.Parse(fishFields[3]), int.Parse(fishFields[4]), 1));
+                    this.AllFish.Add(new Tuple<string, int, int, int>(fishFields[0] + " ", int.Parse(fishFields[3]), int.Parse(fishFields[4]), 1));
                 }
             }
 

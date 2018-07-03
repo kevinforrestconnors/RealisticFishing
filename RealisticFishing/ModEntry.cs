@@ -57,8 +57,6 @@ namespace RealiticFishing
         // The population data structure
         public Dictionary<String, List<FishModel>> population;
 
-        public static List<FishItem> FishItemsRecentlyAdded = new List<FishItem>();
-
         public bool inventoryWasReconstructed = false;
 
         /*********
@@ -377,9 +375,7 @@ namespace RealiticFishing
 
                     if (!(e.Added[0].Item is FishItem)) {
                         Game1.player.removeItemFromInventory(e.Added[0].Item);
-                    } else {
-                        ModEntry.FishItemsRecentlyAdded.Add(e.Added[0].Item as FishItem);
-                    }
+                    } 
                 } else {
                     return;
                 }
@@ -392,9 +388,7 @@ namespace RealiticFishing
                         e.QuantityChanged[0].Item.Stack -= e.QuantityChanged[0].StackChange;
                     } else {
 
-                        if (e.QuantityChanged[0].StackChange > 0) {
-                            ModEntry.FishItemsRecentlyAdded.Add(e.QuantityChanged[0].Item as FishItem);
-                        } else {
+                        if (e.QuantityChanged[0].StackChange < 0) {
 
                             int numRemoved = e.QuantityChanged[0].StackChange;
                             var item = (e.QuantityChanged[0].Item as FishItem);

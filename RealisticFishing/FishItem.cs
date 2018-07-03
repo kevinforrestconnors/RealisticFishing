@@ -22,6 +22,7 @@ namespace RealisticFishing
         public FishItem(int id) 
             : base(id, 1, false, -1, 1) 
         {
+            this.Name += " ";
             this.Id = id;
             this.Description = base.getDescription();
             this.FishStack.Add(new FishModel(-1, this.Name, -1, -1, 0, 1));
@@ -30,12 +31,12 @@ namespace RealisticFishing
         public FishItem(int id, FishModel fish) 
             : base(id, 1, false, -1, fish.quality)
         {
+            this.Name += " ";
             this.Id = id;
             this.Description = base.getDescription();
 
             if (FishItem.lastFishAddedToInventory != null) {
                 this.FishStack.Add(FishItem.lastFishAddedToInventory);
-                ModEntry.FishItemsRecentlyAdded.Clear();
             }
         }
 
@@ -52,7 +53,7 @@ namespace RealisticFishing
                 if (index < Game1.player.items.Count && Game1.player.items[index] != null && (Game1.player.items[index].maximumStackSize() != -1 && Game1.player.items[index].getStack() < Game1.player.items[index].maximumStackSize()) && Game1.player.items[index].Name.Equals(item.Name) && ((!(item is StardewValley.Object) || !(Game1.player.items[index] is StardewValley.Object) || (item as StardewValley.Object).quality.Value == (Game1.player.items[index] as StardewValley.Object).quality.Value && (item as StardewValley.Object).parentSheetIndex.Value == (Game1.player.items[index] as StardewValley.Object).parentSheetIndex.Value) && item.canStackWith(Game1.player.items[index])))
                 {
                     Tests.ModEntryInstance.Monitor.Log("First for loop");
-                    int stack = Game1.player.items[index].addToStack(item.getStack());
+                    int stack = (Game1.player.items[index] as FishItem).addToStack((FishItem)item);
                     if (stack <= 0)
                         return (Item)null;
                     item.Stack = stack;
@@ -140,20 +141,9 @@ namespace RealisticFishing
             return (int)Math.Round(p);
         }
 
-        public override int addToStack(int amount) {
-            int stackSize = base.addToStack(amount);
-
-            if (stackSize != this.FishStack.Count) {
-                foreach (FishItem fishItem in ModEntry.FishItemsRecentlyAdded) {
-                    if (this.Name == fishItem.Name) {
-                        this.FishStack.AddRange(fishItem.FishStack);
-                    }
-                }
-
-                ModEntry.FishItemsRecentlyAdded.Clear();
-            }
-
-            return stackSize;
+        public int addToStack(FishItem itemToAdd) {
+            this.FishStack.AddRange(itemToAdd.FishStack);
+            return this.addToStack(1);
         }
 
         public override bool canStackWith(Item other)
