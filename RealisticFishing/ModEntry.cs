@@ -59,6 +59,9 @@ namespace RealiticFishing
 
         public bool inventoryWasReconstructed = false;
 
+        // The fish stack removed when a negative stack change occurs, that should be added to whichever item is added next
+        public List<FishModel> fishStackChange = new List<FishModel>();
+
         /*********
         ** Public methods
         *********/
@@ -375,27 +378,56 @@ namespace RealiticFishing
 
                     if (!(e.Added[0].Item is FishItem)) {
                         Game1.player.removeItemFromInventory(e.Added[0].Item);
-                    } 
+                    } else {
+
+                        //var item = (e.Added[0].Item as FishItem);
+
+                        //if (this.fishStackChange.Count > 0 && item.Name == this.fishStackChange[0].name && item.Stack == this.fishStackChange.Count) {
+                        //    item.FishStack.AddRange(this.fishStackChange);
+                        //    this.fishStackChange = null;
+                        //}
+                    }
                 } else {
                     return;
                 }
 
-            } else if (e.QuantityChanged.Count > 0) {
+            }
+
+            if (e.Removed.Count > 0) {
+
+                // Item.Category == -4 tests if item is a fish.
+                if (e.Removed[0].Item.Category == -4) {
+
+                    if (e.Removed[0].Item is FishItem) {
+
+                        int numRemoved = e.Removed[0].StackChange;
+                        var item = e.Removed[0].Item as FishItem;
+
+                        if (e.Removed[0].Item.Stack < 0)
+                        {
+                            this.fishStackChange = item.FishStack;
+                        }
+                    }
+                }
+            }
+
+            if (e.QuantityChanged.Count > 0) {
+
                 // Item.Category == -4 tests if item is a fish.
                 if (e.QuantityChanged[0].Item.Category == -4) {
                     if (!(e.QuantityChanged[0].Item is FishItem))
                     {
+                        // Used to remove the basic fish item without removing the FishItem custom item
                         e.QuantityChanged[0].Item.Stack -= e.QuantityChanged[0].StackChange;
                     } else {
 
                         if (e.QuantityChanged[0].StackChange < 0) {
 
-                            int numRemoved = e.QuantityChanged[0].StackChange;
-                            var item = (e.QuantityChanged[0].Item as FishItem);
+                            int numRemoved = Math.Abs(e.QuantityChanged[0].StackChange);
+                            var item = e.QuantityChanged[0].Item as FishItem;
 
-                            if (e.QuantityChanged[0].Item.Stack < 0) {
-                                item.FishStack.RemoveRange(item.FishStack.Count - numRemoved - 1, numRemoved);
-                            }
+                            this.fishStackChange = item.FishStack.GetRange(item.FishStack.Count - numRemoved, numRemoved);
+                            item.FishStack.RemoveRange(item.FishStack.Count - numRemoved, numRemoved);
                         }
                     }
                 } else {
