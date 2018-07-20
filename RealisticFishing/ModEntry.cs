@@ -10,6 +10,7 @@ using RealisticFishing;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
 using StardewValley.Minigames;
+using StardewValley.Objects;
 
 namespace RealiticFishing
 {
@@ -58,9 +59,11 @@ namespace RealiticFishing
         public Dictionary<String, List<FishModel>> population;
 
         public bool inventoryWasReconstructed = false;
+        public bool chestsWereReconstructed = false;
 
         // The fish stack removed when a negative stack change occurs, that should be added to whichever item is added next
         public List<FishModel> fishStackChange = new List<FishModel>();
+
 
         /*********
         ** Public methods
@@ -188,6 +191,7 @@ namespace RealiticFishing
             this.population = instance.fp.population;
             this.fp.CurrentFishIDCounter = instance.CurrentFishIDCounter;
 
+            // Recover items in inventory
             if (!this.inventoryWasReconstructed) {
 
                 this.inventoryWasReconstructed = true;
@@ -204,6 +208,46 @@ namespace RealiticFishing
                     };
 
                     itemToBeAdded.AddToInventory();
+                }
+            }
+
+            // Recover items in chests
+            if (!this.chestsWereReconstructed)
+            {
+
+                this.chestsWereReconstructed = true;
+
+                foreach (GameLocation location in Game1.locations)
+                {
+
+                    if (instance.chests.ContainsKey(location.Name))
+                    {
+                        var chestsInLocation = instance.chests[location.Name];
+
+                        foreach (StardewValley.Object worldObject in location.objects.Values)
+                        {
+
+                            if (worldObject is Chest)
+                            {
+                                if (chestsInLocation.ContainsKey(worldObject.TileLocation)) {
+
+                                    foreach (Tuple<int, List<FishModel>> f in chestsInLocation[worldObject.TileLocation])
+                                    {
+                                        int id = f.Item1;
+                                        var fishStack = f.Item2;
+
+                                        var itemToBeAdded = new FishItem(id, fishStack[0])
+                                        {
+                                            Stack = fishStack.Count,
+                                            FishStack = fishStack
+                                        };
+
+                                        (worldObject as Chest).items.Add(itemToBeAdded);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -232,21 +276,51 @@ namespace RealiticFishing
 
             instance.inventory.Clear();
 
+            // Save items in inventory
             for (int index = 0; index < Game1.player.maxItems; ++index)
             {
                 if (index < Game1.player.items.Count && Game1.player.items[index] != null)
                 {
                     Item item = Game1.player.items[index];
                     if (item is FishItem) {
-                        instance.inventory.Add(new Tuple<int, List<FishModel>>(item.parentSheetIndex, (item as FishItem).FishStack));
+                        instance.inventory.Add(new Tuple<int, List<FishModel>>(item.ParentSheetIndex, (item as FishItem).FishStack));
                         Game1.player.removeItemFromInventory(item);
                     }
                 }
             }
 
+            instance.chests.Clear();
+
+            // Save items in chests
+            foreach (GameLocation location in Game1.locations) {
+
+                var chestsInLocation = new Dictionary<Vector2, List<Tuple<int, List<FishModel>>>>();
+
+                foreach (StardewValley.Object worldObject in location.objects.Values) {
+
+                    var fishInChest = new List<Tuple<int, List<FishModel>>>();
+
+                    if (worldObject is Chest) {
+
+                        foreach (Item item in (worldObject as Chest).items) {
+
+                            if (item is FishItem) {
+                                fishInChest.Add(new Tuple<int, List<FishModel>>(item.ParentSheetIndex, (item as FishItem).FishStack));
+                                (worldObject as Chest).items.Remove(item);
+                            }
+                        }
+
+                        chestsInLocation.Add(worldObject.TileLocation, fishInChest);
+                    }
+                }
+
+                instance.chests.Add(location.Name, chestsInLocation);
+            }
+
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
 
             this.inventoryWasReconstructed = false;
+            this.chestsWereReconstructed = false;
 
             this.Monitor.Log("BeforeSave: " + instance.fp.PrintChangedFish(new List<String>()));
         }
@@ -276,6 +350,47 @@ namespace RealiticFishing
                     itemToBeAdded.AddToInventory();
                 }
             }
+
+            // Recover items in chests
+            if (!this.chestsWereReconstructed)
+            {
+
+                this.chestsWereReconstructed = true;
+
+                foreach (GameLocation location in Game1.locations)
+                {
+                    
+                    if (instance.chests.ContainsKey(location.Name))
+                    {
+                        var chestsInLocation = instance.chests[location.Name];
+
+                        foreach (StardewValley.Object worldObject in location.objects.Values)
+                        {
+
+                            if (worldObject is Chest)
+                            {
+                                if (chestsInLocation.ContainsKey(worldObject.TileLocation)) {
+
+                                    foreach (Tuple<int, List<FishModel>> f in chestsInLocation[worldObject.TileLocation])
+                                    {
+                                        int id = f.Item1;
+                                        var fishStack = f.Item2;
+
+                                        var itemToBeAdded = new FishItem(id, fishStack[0])
+                                        {
+                                            Stack = fishStack.Count,
+                                            FishStack = fishStack
+                                        };
+
+                                        (worldObject as Chest).items.Add(itemToBeAdded);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         }
 
         /* GameEvents_OnUpdateTick
