@@ -438,6 +438,7 @@ namespace RealiticFishing
 
                         // store a new custom fish item
                         Item customFish = (Item)new FishItem(this.whichFish, selectedFish);
+                        FishItem.itemToAdd = customFish as FishItem;
                         ((FishItem)customFish).AddToInventory();
                         this.FishCaught = customFish;
 
@@ -521,7 +522,6 @@ namespace RealiticFishing
 
                         FishItem.itemToAdd = new FishItem(item.Id);
                         FishItem.itemToAdd.FishStack = item.FishStack;
-
                     }
                 }
             }

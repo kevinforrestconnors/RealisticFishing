@@ -37,6 +37,7 @@ namespace RealisticFishing
 
             // store a new custom fish item
             Item customFish = (Item)new FishItem(ModEntryInstance.fp.AllFish[0].Item1, selectedFish);
+            FishItem.itemToAdd = customFish as FishItem;
             ((FishItem)customFish).AddToInventory();
             ModEntryInstance.FishCaught = customFish;
         }
