@@ -31,8 +31,14 @@ namespace RealisticFishing
             return this.length.CompareTo(o.length);
         }
 
-        public FishModel MakeBaby() {
+        public FishModel MakeBaby() 
+        {
             return new FishModel(this.uniqueID, this.name, this.minLength, this.maxLength, EvolutionHelpers.GetMutatedFishLength(this.length, this.minLength, this.maxLength), this.quality);
+        }
+
+        public override string ToString() 
+        {
+            return this.name + " " + Math.Round(this.length);
         }
     }
 }

@@ -22,9 +22,6 @@ namespace RealiticFishing
         *********/
         /// <summary>The mod configuration.</summary>
         public static Random rand = new Random();
-         
-        public bool ShouldRunTests = false;
-        public bool RunningTests = false; 
 
         // Used to detect if the player is fishing.
         private SBobberBar Bobber;
@@ -61,9 +58,6 @@ namespace RealiticFishing
         public bool inventoryWasReconstructed = false;
         public bool chestsWereReconstructed = false;
 
-        // The fish stack removed when a negative stack change occurs, that should be added to whichever item is added next
-        public List<FishModel> fishStackChange = new List<FishModel>();
-
 
         /*********
         ** Public methods
@@ -85,9 +79,10 @@ namespace RealiticFishing
 
             Tests.ModEntryInstance = this;
 
-            if (this.ShouldRunTests)
+            if (Tests.ShouldRunTests)
             {
-                GameEvents.EighthUpdateTick += Tests.GameEvents_OnUpdateTickTests;
+                GameEvents.EighthUpdateTick += Tests.GameEvents_OnUpdateTick;
+                ControlEvents.KeyPressed += Tests.ControlEvents_KeyPressed;
             }
         }
 
@@ -117,6 +112,18 @@ namespace RealiticFishing
         {
         }
 
+        /* ControlEvents_KeyPressed
+         * Triggers every a key is pressed.
+         * Used to play/pause tests.
+         */
+        private void ControlEvents_KeyPressed(object sender, EventArgsKeyPressed e)
+        {
+            if (e.KeyPressed.Equals(Keys.O) && Tests.ShouldRunTests)
+            {
+                Tests.RunningTests = !Tests.RunningTests;
+            }
+        }
+
         /* TimeEvents_AfterDayStarted
          * Triggers at the beginning of each day.
          * Regenerates X fish, where X corresponds in number and type to the 
@@ -142,9 +149,9 @@ namespace RealiticFishing
                 this.population[fishName] = fishOfType;
             }
 
-            foreach (Tuple<String, int, int, int> fish in this.fp.AllFish) {
-                if (this.fp.IsAverageFishBelowValue(fish.Item1)) {
-                    this.OnFishAtCriticalLevel(fish.Item1);
+            foreach (Tuple<int, string, int, int, int> fish in this.fp.AllFish) {
+                if (this.fp.IsAverageFishBelowValue(fish.Item2)) {
+                    this.OnFishAtCriticalLevel(fish.Item2);
                 }
             }
 
@@ -430,7 +437,6 @@ namespace RealiticFishing
                         this.Helper.Reflection.GetField<int>(rod, "fishSize").SetValue((int)Math.Round(selectedFish.length));
 
                         // store a new custom fish item
-                        FishItem.lastFishAddedToInventory = selectedFish;
                         Item customFish = (Item)new FishItem(this.whichFish, selectedFish);
                         ((FishItem)customFish).AddToInventory();
                         this.FishCaught = customFish;
@@ -467,88 +473,77 @@ namespace RealiticFishing
             }
         }
 
-        /* ControlEvents_KeyPressed
-         * Triggers every a key is pressed.
-         * Used to play/pause tests.
-         */
-        private void ControlEvents_KeyPressed(object sender, EventArgsKeyPressed e)
-        {
-            if (e.KeyPressed.Equals(Keys.O) && Tests.ShouldRunTests) {
-                Tests.RunningTests = !Tests.RunningTests;
-            }
-
-        }
-
         /* PlayerEvents_InventoryChanged
          * Triggers every time the inventory changes.
          * Calls PromptThrowBackFish if the player just gained a fish and also just finished fishing.
          * If the player caught treasure, waits until the player gains the fish and this executes again when the player gains the fish.
          */
         private void PlayerEvents_InventoryChanged(object sender, EventArgsInventoryChanged e) {
-
-            if (e.Added.Count > 0) {
+            
+            foreach (ItemStackChange i in e.Added) 
+            {
 
                 // Item.Category == -4 tests if item is a fish.
-                if (e.Added[0].Item.Category == -4) {
-
-                    if (!(e.Added[0].Item is FishItem)) {
-                        Game1.player.removeItemFromInventory(e.Added[0].Item);
+                if (i.Item.Category == -4)
+                {
+                    if (!(i.Item is FishItem))
+                    {
+                        Game1.player.removeItemFromInventory(i.Item);
                     } else {
 
-                        //var item = (e.Added[0].Item as FishItem);
+                        (i.Item as FishItem).FishStack = FishItem.itemToAdd.FishStack;
 
-                        //if (this.fishStackChange.Count > 0 && item.Name == this.fishStackChange[0].name && item.Stack == this.fishStackChange.Count) {
-                        //    item.FishStack.AddRange(this.fishStackChange);
-                        //    this.fishStackChange = null;
-                        //}
-                    }
-                } else {
-                    return;
-                }
+                        this.Monitor.Log("Item added");
 
-            }
+                        string fishStackToString = "FishStack of item added: [";
 
-            if (e.Removed.Count > 0) {
-
-                // Item.Category == -4 tests if item is a fish.
-                if (e.Removed[0].Item.Category == -4) {
-
-                    if (e.Removed[0].Item is FishItem) {
-
-                        int numRemoved = e.Removed[0].StackChange;
-                        var item = e.Removed[0].Item as FishItem;
-
-                        if (e.Removed[0].Item.Stack < 0)
+                        foreach (FishModel f in (i.Item as FishItem).FishStack)
                         {
-                            this.fishStackChange = item.FishStack;
+                            fishStackToString += f.ToString() + ", ";
                         }
+
+                        this.Monitor.Log(fishStackToString + "]");
                     }
                 }
             }
 
-            if (e.QuantityChanged.Count > 0) {
 
+            foreach (ItemStackChange i in e.QuantityChanged)
+            {
                 // Item.Category == -4 tests if item is a fish.
-                if (e.QuantityChanged[0].Item.Category == -4) {
-                    if (!(e.QuantityChanged[0].Item is FishItem))
+                if (i.Item.Category == -4)
+                {
+                    if (!(i.Item is FishItem))
                     {
                         // Used to remove the basic fish item without removing the FishItem custom item
-                        e.QuantityChanged[0].Item.Stack -= e.QuantityChanged[0].StackChange;
-                    } else {
+                        i.Item.Stack -= i.StackChange;
+                    }
+                    else
+                    {
 
-                        if (e.QuantityChanged[0].StackChange < 0) {
+                        if (i.StackChange < 0 && i.Item.Stack > 0)
+                        {
+                            this.Monitor.Log("Stackchange: i.Item.Stack = " + i.Item.Stack);
 
-                            int numRemoved = Math.Abs(e.QuantityChanged[0].StackChange);
-                            var item = e.QuantityChanged[0].Item as FishItem;
+                            int numRemoved = Math.Abs(i.StackChange);
+                            var item = i.Item as FishItem;
 
-                            this.fishStackChange = item.FishStack.GetRange(item.FishStack.Count - numRemoved, numRemoved);
+                            FishItem.itemToAdd = new FishItem(item.Id);
+                            FishItem.itemToAdd.FishStack = item.FishStack.GetRange(item.FishStack.Count - numRemoved, numRemoved);
+
+                            string fishStackToString = "FishStack of itemToAdd: [";
+
+                            foreach (FishModel f in FishItem.itemToAdd.FishStack) {
+                                fishStackToString += f.ToString() + ", ";
+                            }
+
+                            this.Monitor.Log(fishStackToString + "]");
+
                             item.FishStack.RemoveRange(item.FishStack.Count - numRemoved, numRemoved);
                         }
                     }
-                } else {
-                    return;
                 }
-            } 
+            }
         }
 
         /* OnFishingEnd
