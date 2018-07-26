@@ -154,20 +154,20 @@ namespace RealisticFishing
             return (int)Math.Round(p);
         }
 
-        //public override int addToStack(int quantity) {
+        public override int addToStack(int quantity) {
 
-        //    string fishStackToString = "FishStack in addToStack: [";
+            string fishStackToString = "FishStack in addToStack: [";
 
-        //    foreach (FishModel f in FishItem.itemToAdd.FishStack)
-        //    {
-        //        fishStackToString += f.ToString() + ", ";
-        //    }
+            foreach (FishModel f in FishItem.itemToAdd.FishStack)
+            {
+                fishStackToString += f.ToString() + ", ";
+            }
 
-        //    Tests.ModEntryInstance.Monitor.Log(fishStackToString + "]");
+            Tests.ModEntryInstance.Monitor.Log(fishStackToString + "]");
 
-        //    this.FishStack.AddRange(FishItem.itemToAdd.FishStack);
-        //    return base.addToStack(quantity);
-        //}
+            this.FishStack.AddRange(FishItem.itemToAdd.FishStack);
+            return base.addToStack(quantity);
+        }
 
         public override bool canStackWith(Item other)
         {

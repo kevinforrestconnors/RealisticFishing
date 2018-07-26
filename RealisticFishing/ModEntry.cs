@@ -507,6 +507,24 @@ namespace RealiticFishing
                 }
             }
 
+            foreach (ItemStackChange i in e.Removed) 
+            {
+                // Item.Category == -4 tests if item is a fish.
+                if (i.Item.Category == -4) 
+                {
+
+                    if (i.Item is FishItem) {
+
+                        this.Monitor.Log("Removed: i.Item.Stack = " + i.Item.Stack);
+
+                        var item = i.Item as FishItem;
+
+                        FishItem.itemToAdd = new FishItem(item.Id);
+                        FishItem.itemToAdd.FishStack = item.FishStack;
+
+                    }
+                }
+            }
 
             foreach (ItemStackChange i in e.QuantityChanged)
             {
