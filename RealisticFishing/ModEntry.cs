@@ -521,7 +521,7 @@ namespace RealiticFishing
                     else
                     {
 
-                        if (i.StackChange < 0 && i.Item.Stack > 0)
+                        if (i.StackChange < 0)
                         {
                             this.Monitor.Log("Stackchange: i.Item.Stack = " + i.Item.Stack);
 
