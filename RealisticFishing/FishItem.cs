@@ -15,8 +15,12 @@ namespace RealisticFishing
         public int Id;
         public List<FishModel> FishStack = new List<FishModel>();
 
-        // this is set directly before addToStack is called in addToInventory
+        public Boolean recoveredFromInventory = false;
+
         public static FishItem itemToAdd;
+        public static FishItem itemInChestToFix;
+        public static FishItem itemInChestToUpdate;
+        public static FishItem itemToChange;
 
         public String Description;
 
@@ -24,7 +28,7 @@ namespace RealisticFishing
             : base(id, 1, false, -1, 1) 
         {
 
-            Tests.ModEntryInstance.Monitor.Log("FishItem(id) called.");
+            Tests.ModEntryInstance.Monitor.Log("\nFishItem(id) called.");
 
             this.Name += " ";
             this.Id = id;
@@ -35,7 +39,7 @@ namespace RealisticFishing
         public FishItem(int id, FishModel fish) 
             : base(id, 1, false, -1, fish.quality)
         {
-            Tests.ModEntryInstance.Monitor.Log("FishItem(id, fish) called.");
+            Tests.ModEntryInstance.Monitor.Log("\nFishItem(id, fish) called.");
 
             this.Name += " ";
             this.Id = id;
@@ -46,17 +50,18 @@ namespace RealisticFishing
 
         public void AddToInventory()
         {
-            Tests.ModEntryInstance.Monitor.Log("AddToInventory");
+            Tests.ModEntryInstance.Monitor.Log("\nAddToInventory");
 
             Item item = this;
+            FishItem fishItem = item as FishItem;
 
             for (int index = 0; index < (int)(Game1.player.maxItems); ++index)
             {
                 // Adding to a non-empty inventory slot
                 if (index < Game1.player.items.Count && Game1.player.items[index] != null && (Game1.player.items[index].maximumStackSize() != -1 && Game1.player.items[index].getStack() < Game1.player.items[index].maximumStackSize()) && Game1.player.items[index].Name.Equals(item.Name) && ((!(item is StardewValley.Object) || !(Game1.player.items[index] is StardewValley.Object) || (item as StardewValley.Object).quality.Value == (Game1.player.items[index] as StardewValley.Object).quality.Value && (item as StardewValley.Object).parentSheetIndex.Value == (Game1.player.items[index] as StardewValley.Object).parentSheetIndex.Value) && item.canStackWith(Game1.player.items[index])))
                 {
-                    (Game1.player.items[index] as FishItem).Stack += (item as FishItem).Stack;
-                    (Game1.player.items[index] as FishItem).FishStack.AddRange((item as FishItem).FishStack);
+                    (Game1.player.items[index] as FishItem).Stack += fishItem.Stack;
+                    (Game1.player.items[index] as FishItem).FishStack.AddRange(fishItem.FishStack);
                     return;
                 }
             }
@@ -78,23 +83,15 @@ namespace RealisticFishing
 
         public override Item getOne() {
 
+            Tests.ModEntryInstance.Monitor.Log("\nGetOne called");
+
+            this.checkIfStackIsWrong();
+
             if (this.FishStack.Count > 0) {
                 
-                FishItem one = new FishItem(this.Id, this.FishStack[0]);
-                //one.FishStack = thisFishStack;
-                //FishItem.itemToAdd = one;
-
-                //string fishStackToString = "FishStack in getOne: [";
-
-                //foreach (FishModel f in FishItem.itemToAdd.FishStack)
-                //{
-                //    fishStackToString += f.ToString() + ", ";
-                //}
-
-                //Tests.ModEntryInstance.Monitor.Log(fishStackToString + "]");
-
-                //List<FishModel> thisFishStack = FishItem.itemToAdd.FishStack;
-
+                FishItem one = new FishItem(this.Id, this.FishStack[this.FishStack.Count - 1]);
+                FishItem.itemInChestToFix = one;
+                FishItem.itemInChestToUpdate = this;
 
                 return (Item)one;
             } else {
@@ -105,6 +102,7 @@ namespace RealisticFishing
 
         public override string getDescription()
         {
+
             if (this.FishStack.Count == 1) {
                 return this.Description + " This one is " + ((int)Math.Round(this.FishStack[0].length)).ToString() + " in. long.";
             }
@@ -154,24 +152,39 @@ namespace RealisticFishing
             return (int)Math.Round(p);
         }
 
-        public override int addToStack(int quantity) {
+        public override int addToStack(int amount) {
 
-            string fishStackToString = "FishStack in addToStack: [";
+            Tests.ModEntryInstance.Monitor.Log("\naddToStack called");
 
-            foreach (FishModel f in FishItem.itemToAdd.FishStack)
-            {
-                fishStackToString += f.ToString() + ", ";
-            }
+            FishItem.itemToChange = this;
 
-            Tests.ModEntryInstance.Monitor.Log(fishStackToString + "]");
-
-            this.FishStack.AddRange(FishItem.itemToAdd.FishStack);
-            return base.addToStack(quantity);
+            return base.addToStack(amount);
         }
 
         public override bool canStackWith(Item other)
         {
             return base.canStackWith(other) && other is FishItem;
+        }
+
+        public void checkIfStackIsWrong() {
+
+            Tests.ModEntryInstance.Monitor.Log("checkIfStackIsWrong called");
+            
+            // Needs testing: possibly necessary to handle removing stacks from chests
+            if (this.FishStack.Count > this.Stack)
+            {
+                Tests.ModEntryInstance.Monitor.Log("Removing some items from FishStack");
+                Tests.ModEntryInstance.Monitor.Log("Removing items in range " + this.Stack.ToString() + ", " + (this.FishStack.Count - this.Stack).ToString());
+                this.FishStack.RemoveRange(this.Stack, this.FishStack.Count - this.Stack);
+            }
+
+            //// Necessary to handle removing stacks from chests
+            //if (this.Stack > this.FishStack.Count)
+            //{
+            //    Tests.ModEntryInstance.Monitor.Log("Altering stack size");
+            //    this.FishStack = FishItem.itemToAdd.FishStack;
+            //    this.Stack = this.FishStack.Count;
+            //}
         }
     }
 }

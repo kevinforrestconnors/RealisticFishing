@@ -199,63 +199,15 @@ namespace RealiticFishing
             this.fp.CurrentFishIDCounter = instance.CurrentFishIDCounter;
 
             // Recover items in inventory
-            if (!this.inventoryWasReconstructed) {
-
-                this.inventoryWasReconstructed = true;
-
-                foreach (Tuple<int, List<FishModel>> f in instance.inventory)
-                {
-                    int id = f.Item1;
-                    var fishStack = f.Item2;
-
-                    var itemToBeAdded = new FishItem(id, fishStack[0])
-                    {
-                        Stack = fishStack.Count,
-                        FishStack = fishStack
-                    };
-
-                    itemToBeAdded.AddToInventory();
-                }
+            if (!this.inventoryWasReconstructed) 
+            {
+                this.RecoverItemsInInventory(instance);
             }
 
             // Recover items in chests
             if (!this.chestsWereReconstructed)
             {
-
-                this.chestsWereReconstructed = true;
-
-                foreach (GameLocation location in Game1.locations)
-                {
-
-                    if (instance.chests.ContainsKey(location.Name))
-                    {
-                        var chestsInLocation = instance.chests[location.Name];
-
-                        foreach (StardewValley.Object worldObject in location.objects.Values)
-                        {
-
-                            if (worldObject is Chest)
-                            {
-                                if (chestsInLocation.ContainsKey(worldObject.TileLocation)) {
-
-                                    foreach (Tuple<int, List<FishModel>> f in chestsInLocation[worldObject.TileLocation])
-                                    {
-                                        int id = f.Item1;
-                                        var fishStack = f.Item2;
-
-                                        var itemToBeAdded = new FishItem(id, fishStack[0])
-                                        {
-                                            Stack = fishStack.Count,
-                                            FishStack = fishStack
-                                        };
-
-                                        (worldObject as Chest).items.Add(itemToBeAdded);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                this.RecoverItemsInChests(instance);
             }
 
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
@@ -340,62 +292,13 @@ namespace RealiticFishing
 
             if (!this.inventoryWasReconstructed)
             {
-
-                this.inventoryWasReconstructed = true;
-
-                foreach (Tuple<int, List<FishModel>> f in instance.inventory)
-                {
-                    int id = f.Item1;
-                    var fishStack = f.Item2;
-
-                    var itemToBeAdded = new FishItem(id, fishStack[0])
-                    {
-                        Stack = fishStack.Count,
-                        FishStack = fishStack
-                    };
-
-                    itemToBeAdded.AddToInventory();
-                }
+                this.RecoverItemsInInventory(instance);
             }
 
             // Recover items in chests
             if (!this.chestsWereReconstructed)
             {
-
-                this.chestsWereReconstructed = true;
-
-                foreach (GameLocation location in Game1.locations)
-                {
-                    
-                    if (instance.chests.ContainsKey(location.Name))
-                    {
-                        var chestsInLocation = instance.chests[location.Name];
-
-                        foreach (StardewValley.Object worldObject in location.objects.Values)
-                        {
-
-                            if (worldObject is Chest)
-                            {
-                                if (chestsInLocation.ContainsKey(worldObject.TileLocation)) {
-
-                                    foreach (Tuple<int, List<FishModel>> f in chestsInLocation[worldObject.TileLocation])
-                                    {
-                                        int id = f.Item1;
-                                        var fishStack = f.Item2;
-
-                                        var itemToBeAdded = new FishItem(id, fishStack[0])
-                                        {
-                                            Stack = fishStack.Count,
-                                            FishStack = fishStack
-                                        };
-
-                                        (worldObject as Chest).items.Add(itemToBeAdded);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                this.RecoverItemsInChests(instance);
             }
 
         }
@@ -487,18 +390,23 @@ namespace RealiticFishing
                 // Item.Category == -4 tests if item is a fish.
                 if (i.Item.Category == -4)
                 {
-                    if (!(i.Item is FishItem))
+                    if (!(i.Item is FishItem fishItem))
                     {
                         Game1.player.removeItemFromInventory(i.Item);
                     } else {
 
-                        (i.Item as FishItem).FishStack = FishItem.itemToAdd.FishStack;
+                        if (fishItem.recoveredFromInventory)
+                        {
+                            fishItem.recoveredFromInventory = false;
+                        } else {
+                            fishItem.FishStack = FishItem.itemToAdd.FishStack;
+                        }
 
-                        this.Monitor.Log("Item added");
+                        this.Monitor.Log("\nItem added");
 
                         string fishStackToString = "FishStack of item added: [";
 
-                        foreach (FishModel f in (i.Item as FishItem).FishStack)
+                        foreach (FishModel f in fishItem.FishStack)
                         {
                             fishStackToString += f.ToString() + ", ";
                         }
@@ -514,14 +422,12 @@ namespace RealiticFishing
                 if (i.Item.Category == -4) 
                 {
 
-                    if (i.Item is FishItem) {
+                    if (i.Item is FishItem fishItem) {
 
-                        this.Monitor.Log("Removed: i.Item.Stack = " + i.Item.Stack);
+                        this.Monitor.Log("\nRemoved: i.Item.Stack = " + i.Item.Stack);
 
-                        var item = i.Item as FishItem;
-
-                        FishItem.itemToAdd = new FishItem(item.Id);
-                        FishItem.itemToAdd.FishStack = item.FishStack;
+                        FishItem.itemToAdd = new FishItem(fishItem.Id);
+                        FishItem.itemToAdd.FishStack = fishItem.FishStack;
                     }
                 }
             }
@@ -531,7 +437,7 @@ namespace RealiticFishing
                 // Item.Category == -4 tests if item is a fish.
                 if (i.Item.Category == -4)
                 {
-                    if (!(i.Item is FishItem))
+                    if (!(i.Item is FishItem fishItem))
                     {
                         // Used to remove the basic fish item without removing the FishItem custom item
                         i.Item.Stack -= i.StackChange;
@@ -541,26 +447,45 @@ namespace RealiticFishing
 
                         if (i.StackChange < 0)
                         {
-                            this.Monitor.Log("Stackchange: i.Item.Stack = " + i.Item.Stack);
+                            
+                            this.Monitor.Log("\nStackchange negative: remaining i.Item.Stack = " + i.Item.Stack);
 
                             int numRemoved = Math.Abs(i.StackChange);
-                            var item = i.Item as FishItem;
 
-                            FishItem.itemToAdd = new FishItem(item.Id);
-                            FishItem.itemToAdd.FishStack = item.FishStack.GetRange(item.FishStack.Count - numRemoved, numRemoved);
+                            FishItem.itemToAdd = new FishItem(fishItem.Id);
+                            FishItem.itemToAdd.FishStack = fishItem.FishStack.GetRange(fishItem.FishStack.Count - numRemoved, numRemoved);
 
-                            string fishStackToString = "FishStack of itemToAdd: [";
-
-                            foreach (FishModel f in FishItem.itemToAdd.FishStack) {
-                                fishStackToString += f.ToString() + ", ";
+                            if (FishItem.itemInChestToFix != null) {
+                                FishItem.itemInChestToFix.FishStack = FishItem.itemToAdd.FishStack;
+                                FishItem.itemInChestToFix = null;
                             }
 
-                            this.Monitor.Log(fishStackToString + "]");
+                            fishItem.FishStack.RemoveRange(fishItem.FishStack.Count - numRemoved, numRemoved);
 
-                            item.FishStack.RemoveRange(item.FishStack.Count - numRemoved, numRemoved);
+                        } else if (i.StackChange > 0) {
+
+                            this.Monitor.Log("\nItem was quantitychanged positive");
+
+                            if (FishItem.itemInChestToFix != null)
+                            {
+                                FishItem.itemInChestToUpdate.checkIfStackIsWrong();
+                                FishItem.itemInChestToUpdate = null;
+                                fishItem.FishStack.AddRange(FishItem.itemInChestToFix.FishStack);
+                                FishItem.itemInChestToFix = null;
+                            }
+
+                            FishItem.itemToChange = null;
                         }
                     }
                 }
+            }
+
+            if (FishItem.itemToChange != null) {
+
+                this.Monitor.Log("itemToChange != null");
+
+                FishItem.itemToChange.FishStack.AddRange(FishItem.itemToAdd.FishStack);
+                FishItem.itemToChange = null;
             }
         }
 
@@ -697,6 +622,61 @@ namespace RealiticFishing
             if (groundLevel != -1)
                 debris.chunkFinalYLevel = groundLevel;
             location.debris.Add(debris);
+        }
+
+        private void RecoverItemsInChests(RealisticFishingData instance) {
+            
+            this.chestsWereReconstructed = true;
+
+            foreach (GameLocation location in Game1.locations)
+            {
+
+                if (instance.chests.ContainsKey(location.Name))
+                {
+                    var chestsInLocation = instance.chests[location.Name];
+
+                    foreach (StardewValley.Object worldObject in location.objects.Values)
+                    {
+
+                        if (worldObject is Chest)
+                        {
+                            if (chestsInLocation.ContainsKey(worldObject.TileLocation))
+                            {
+
+                                foreach (Tuple<int, List<FishModel>> f in chestsInLocation[worldObject.TileLocation])
+                                {
+                                    int id = f.Item1;
+                                    var fishStack = f.Item2;
+
+                                    var itemToBeAdded = new FishItem(id, fishStack[0]);
+                                    itemToBeAdded.Stack = fishStack.Count;
+                                    itemToBeAdded.FishStack = fishStack;
+
+                                    (worldObject as Chest).items.Add(itemToBeAdded);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void RecoverItemsInInventory(RealisticFishingData instance) {
+
+            this.inventoryWasReconstructed = true;
+
+            foreach (Tuple<int, List<FishModel>> f in instance.inventory)
+            {
+                int id = f.Item1;
+                var fishStack = f.Item2;
+
+                var itemToBeAdded = new FishItem(id, fishStack[0]);
+                itemToBeAdded.Stack = fishStack.Count;
+                itemToBeAdded.FishStack = fishStack;
+                itemToBeAdded.recoveredFromInventory = true;
+
+                itemToBeAdded.AddToInventory();
+            }
         }
     }
 }
