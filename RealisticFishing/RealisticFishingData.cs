@@ -9,6 +9,8 @@ namespace RealisticFishing
     public class RealisticFishingData
     {
 
+
+
         public List<Tuple<int, List<FishModel>>> inventory { get; set; }
         public Dictionary<String, Dictionary<Vector2, List<Tuple<int, List<FishModel>>>>> chests;
 

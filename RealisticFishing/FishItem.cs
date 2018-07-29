@@ -21,6 +21,7 @@ namespace RealisticFishing
         public static FishItem itemInChestToFix;
         public static FishItem itemInChestToUpdate;
         public static FishItem itemToChange;
+        public static FishItem lastHeldItem;
 
         public String Description;
 
@@ -131,7 +132,7 @@ namespace RealisticFishing
 
             this.FishStack.Reverse();
 
-            if (count == max) {
+            if (count > max) {
                 return this.Description + "This stack contains " + this.Name + "of length: \n" + lengths + "\n...(truncated)";
             } else {
                 return this.Description + "This stack contains " + this.Name + "of length: \n" + lengths;   

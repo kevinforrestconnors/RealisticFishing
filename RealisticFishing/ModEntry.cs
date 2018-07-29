@@ -58,7 +58,6 @@ namespace RealiticFishing
         public bool inventoryWasReconstructed = false;
         public bool chestsWereReconstructed = false;
 
-
         /*********
         ** Public methods
         *********/
@@ -70,6 +69,7 @@ namespace RealiticFishing
             MenuEvents.MenuClosed += this.MenuEvents_MenuClosed;
             GameEvents.UpdateTick += this.GameEvents_OnUpdateTick;
             ControlEvents.KeyPressed += this.ControlEvents_KeyPressed;
+            InputEvents.ButtonPressed += this.InputEvents_ButtonPressed;
             PlayerEvents.InventoryChanged += this.PlayerEvents_InventoryChanged;
             TimeEvents.AfterDayStarted += this.TimeEvents_AfterDayStarted;
             SaveEvents.AfterCreate += this.SaveEvents_AfterCreate;
@@ -99,8 +99,8 @@ namespace RealiticFishing
 
             this.Monitor.Log("Menu is now: " + e.NewMenu.ToString());
 
-            if (e.NewMenu is BobberBar menu) {
-                this.Bobber = SBobberBar.ConstructFromBaseClass(menu);
+            if (e.NewMenu is BobberBar bobberBarMenu) {
+                this.Bobber = SBobberBar.ConstructFromBaseClass(bobberBarMenu);
             } 
         }
 
@@ -121,6 +121,31 @@ namespace RealiticFishing
             if (e.KeyPressed.Equals(Keys.O) && Tests.ShouldRunTests)
             {
                 Tests.RunningTests = !Tests.RunningTests;
+            }
+        }
+
+        private void InputEvents_ButtonPressed(object sender, EventArgsInput e)
+        {
+
+            if (Game1.activeClickableMenu is ItemGrabMenu itemGrabMenu && e.Button == SButton.MouseLeft) {
+
+                int x = (int)e.Cursor.ScreenPixels.X;
+                int y = (int)e.Cursor.ScreenPixels.Y;
+
+                this.Monitor.Log(x + " " + y);
+
+                if (itemGrabMenu.inventory.getItemAt(x, y) == null) {
+
+                    this.Monitor.Log("setting FishItem.lastHeldItem");
+
+                    Item item = itemGrabMenu.ItemsToGrabMenu.leftClick(x, y, itemGrabMenu.heldItem, false);
+
+                    if (item is FishItem) 
+                    {
+                        (item as FishItem).AddToInventory();
+                        FishItem.itemInChestToUpdate = null;
+                    }
+                } 
             }
         }
 
@@ -395,23 +420,35 @@ namespace RealiticFishing
                         Game1.player.removeItemFromInventory(i.Item);
                     } else {
 
+                        this.Monitor.Log("\nItem added");
+
                         if (fishItem.recoveredFromInventory)
                         {
                             fishItem.recoveredFromInventory = false;
                         } else {
-                            fishItem.FishStack = FishItem.itemToAdd.FishStack;
+
+                            this.Monitor.Log("item added");
+
+                            //if (FishItem.lastHeldItem != null)
+                            //{
+                            //    this.Monitor.Log("attempting to add menu.heldItem to fishStack in added");
+                            //    fishItem.FishStack.AddRange(FishItem.lastHeldItem.FishStack.GetRange(0, i.Item.Stack));
+                            //    this.Monitor.Log("setting FishItem.lastHeldItem to null");
+                            //    FishItem.lastHeldItem = null;
+
+                            //} else 
+
+                            if (FishItem.itemInChestToUpdate != null) {
+
+                                this.Monitor.Log("FishItem.itemInChestToUpdate != null in PlayerEvents.Added");
+                                this.Monitor.Log(FishItem.itemInChestToUpdate.FishStack.Count.ToString());
+
+                                fishItem.FishStack = FishItem.itemInChestToUpdate.FishStack.GetRange(0, i.Item.Stack);
+                                FishItem.itemInChestToUpdate.checkIfStackIsWrong();
+                                FishItem.itemInChestToUpdate = null;
+
+                            }
                         }
-
-                        this.Monitor.Log("\nItem added");
-
-                        string fishStackToString = "FishStack of item added: [";
-
-                        foreach (FishModel f in fishItem.FishStack)
-                        {
-                            fishStackToString += f.ToString() + ", ";
-                        }
-
-                        this.Monitor.Log(fishStackToString + "]");
                     }
                 }
             }
@@ -466,12 +503,35 @@ namespace RealiticFishing
 
                             this.Monitor.Log("\nItem was quantitychanged positive");
 
-                            if (FishItem.itemInChestToFix != null)
-                            {
-                                FishItem.itemInChestToUpdate.checkIfStackIsWrong();
-                                FishItem.itemInChestToUpdate = null;
-                                fishItem.FishStack.AddRange(FishItem.itemInChestToFix.FishStack);
-                                FishItem.itemInChestToFix = null;
+                            if (i.StackChange == 1) {
+                                
+                                if (FishItem.itemInChestToFix != null)
+                                {
+                                    this.Monitor.Log("stackchange = 1");
+                                    FishItem.itemInChestToUpdate.checkIfStackIsWrong();
+                                    fishItem.FishStack.AddRange(FishItem.itemInChestToFix.FishStack);
+                                    FishItem.itemInChestToUpdate = null;
+                                    FishItem.itemInChestToFix = null;
+                                }
+                            } else {
+
+                                if (FishItem.itemInChestToUpdate != null)
+                                {
+                                    this.Monitor.Log("stackchange > 1");
+                                    fishItem.FishStack.AddRange(FishItem.itemInChestToUpdate.FishStack.GetRange(0, i.StackChange));
+                                    FishItem.itemInChestToUpdate.checkIfStackIsWrong();
+                                    FishItem.itemInChestToUpdate = null;
+                                    FishItem.itemInChestToFix = null;
+                                } else {
+
+                                    //if (Game1.activeClickableMenu is ItemGrabMenu menu && FishItem.lastHeldItem != null) {
+
+                                    //    this.Monitor.Log("attempting to add menu.heldItem to fishStack in quantityChanged");
+                                    //    fishItem.FishStack.AddRange(FishItem.lastHeldItem.FishStack.GetRange(0, i.StackChange));
+                                    //    this.Monitor.Log("setting FishItem.lastHeldItem to null");
+                                    //    FishItem.lastHeldItem = null;
+                                    //}
+                                }
                             }
 
                             FishItem.itemToChange = null;
@@ -519,8 +579,7 @@ namespace RealiticFishing
         private void PromptThrowBackFish(string fishName, int fishID) {
 
             if (this.NumFishCaughtToday >= this.FishQuota) {
-
-                // TODO add delegate
+                
                 this.ThrowBackFish(Game1.player, "Yes");
 
             } else {
