@@ -21,15 +21,12 @@ namespace RealisticFishing
         public static FishItem itemInChestToFix;
         public static FishItem itemInChestToUpdate;
         public static FishItem itemToChange;
-        public static FishItem lastHeldItem;
 
         public String Description;
 
         public FishItem(int id) 
             : base(id, 1, false, -1, 1) 
         {
-
-            Tests.ModEntryInstance.Monitor.Log("\nFishItem(id) called.");
 
             this.Name += " ";
             this.Id = id;
@@ -40,7 +37,6 @@ namespace RealisticFishing
         public FishItem(int id, FishModel fish) 
             : base(id, 1, false, -1, fish.quality)
         {
-            Tests.ModEntryInstance.Monitor.Log("\nFishItem(id, fish) called.");
 
             this.Name += " ";
             this.Id = id;
@@ -51,7 +47,6 @@ namespace RealisticFishing
 
         public void AddToInventory()
         {
-            Tests.ModEntryInstance.Monitor.Log("\nAddToInventory");
 
             Item item = this;
             FishItem fishItem = item as FishItem;
@@ -84,8 +79,6 @@ namespace RealisticFishing
 
         public override Item getOne() {
 
-            Tests.ModEntryInstance.Monitor.Log("\nGetOne called");
-
             this.checkIfStackIsWrong();
 
             if (this.FishStack.Count > 0) {
@@ -113,7 +106,7 @@ namespace RealisticFishing
             int count = 0;
             int max = 10;
 
-            this.FishStack.Reverse();
+            //this.FishStack.Reverse();
 
             foreach (FishModel fish in this.FishStack) {
 
@@ -130,7 +123,7 @@ namespace RealisticFishing
                 }
             }
 
-            this.FishStack.Reverse();
+            //this.FishStack.Reverse();
 
             if (count > max) {
                 return this.Description + "This stack contains " + this.Name + "of length: \n" + lengths + "\n...(truncated)";
@@ -155,8 +148,6 @@ namespace RealisticFishing
 
         public override int addToStack(int amount) {
 
-            Tests.ModEntryInstance.Monitor.Log("\naddToStack called");
-
             FishItem.itemToChange = this;
 
             return base.addToStack(amount);
@@ -168,24 +159,11 @@ namespace RealisticFishing
         }
 
         public void checkIfStackIsWrong() {
-
-            Tests.ModEntryInstance.Monitor.Log("checkIfStackIsWrong called");
             
-            // Needs testing: possibly necessary to handle removing stacks from chests
             if (this.FishStack.Count > this.Stack)
             {
-                Tests.ModEntryInstance.Monitor.Log("Removing some items from FishStack");
-                Tests.ModEntryInstance.Monitor.Log("Removing items in range " + this.Stack.ToString() + ", " + (this.FishStack.Count - this.Stack).ToString());
                 this.FishStack.RemoveRange(this.Stack, this.FishStack.Count - this.Stack);
             }
-
-            //// Necessary to handle removing stacks from chests
-            //if (this.Stack > this.FishStack.Count)
-            //{
-            //    Tests.ModEntryInstance.Monitor.Log("Altering stack size");
-            //    this.FishStack = FishItem.itemToAdd.FishStack;
-            //    this.Stack = this.FishStack.Count;
-            //}
         }
     }
 }
