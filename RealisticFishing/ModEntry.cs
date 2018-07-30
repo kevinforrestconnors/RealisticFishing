@@ -542,7 +542,7 @@ namespace RealiticFishing
                 this.ThrowBackFish(Game1.player, "Yes");
 
             } else {
-                String dialogue = "You have caught " + this.NumFishCaughtToday + " fish today.  You are permitted to catch 10 fish per day.  Throw it back?";
+                String dialogue = "You have caught " + this.NumFishCaughtToday + " fish today.  You are permitted to keep 10 fish per day.  Throw it back?";
 
                 Response[] answerChoices = new[]
                 {
