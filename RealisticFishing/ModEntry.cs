@@ -149,7 +149,7 @@ namespace RealiticFishing
 
                 Item sourceItem = this.Helper.Reflection.GetField<Item>(itemGrabMenu, "sourceItem").GetValue();
 
-                if (sourceItem is Chest || (itemGrabMenu.behaviorOnItemGrab?.Target as Chest).fridge) {
+                if (sourceItem is Chest || (itemGrabMenu.behaviorOnItemGrab?.Target as Chest)?.fridge == true) {
 
                     int x = (int)e.Cursor.ScreenPixels.X;
                     int y = (int)e.Cursor.ScreenPixels.Y;
