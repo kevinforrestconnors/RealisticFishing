@@ -65,7 +65,7 @@ namespace RealisticFishing
             for (int index = 0; index < (int)(Game1.player.maxItems); ++index)
             {
                 // Adding to a non-empty inventory slot
-                if (index < Game1.player.items.Count && Game1.player.items[index] != null && (Game1.player.items[index].maximumStackSize() != -1 && Game1.player.items[index].getStack() < Game1.player.items[index].maximumStackSize()) && Game1.player.items[index].Name.Equals(item.Name) && ((!(item is StardewValley.Object) || !(Game1.player.items[index] is StardewValley.Object) || (item as StardewValley.Object).quality.Value == (Game1.player.items[index] as StardewValley.Object).quality.Value && (item as StardewValley.Object).parentSheetIndex.Value == (Game1.player.items[index] as StardewValley.Object).parentSheetIndex.Value) && item.canStackWith(Game1.player.items[index])))
+                if (index < Game1.player.items.Count && Game1.player.items[index] != null && (Game1.player.items[index].maximumStackSize() != -1 && Game1.player.items[index].getStack() < Game1.player.items[index].maximumStackSize()) && Game1.player.items[index].Name.Equals(item.Name) && ((!(item is StardewValley.Object) || !(Game1.player.items[index] is StardewValley.Object) || (item as StardewValley.Object).quality.Value == (Game1.player.items[index] as StardewValley.Object).quality.Value && (item as StardewValley.Object).ParentSheetIndex == (Game1.player.items[index] as StardewValley.Object).ParentSheetIndex) && item.canStackWith(Game1.player.items[index])))
                 {
                     (Game1.player.items[index] as FishItem).Stack += fishItem.Stack;
                     (Game1.player.items[index] as FishItem).FishStack.AddRange(fishItem.FishStack);

@@ -96,10 +96,30 @@ namespace RealiticFishing
         */
         private void MenuEvents_MenuChanged(object sender, EventArgsClickableMenuChanged e)
         {
+            this.Monitor.Log("New Menu is: " + e.NewMenu.ToString());
 
             if (e.NewMenu is BobberBar bobberBarMenu) {
                 this.Bobber = SBobberBar.ConstructFromBaseClass(bobberBarMenu);
             } 
+
+            // Player just caught a fish, but inventory is full
+            if (e.NewMenu is ItemGrabMenu itemGrabMenu && e.PriorMenu is DialogueBox && FishItem.itemToAdd != null) {
+                
+                Item itemToChange = null;
+
+                foreach (Item item in itemGrabMenu.ItemsToGrabMenu.actualInventory) {
+
+                    // Item is a fish
+                    if (item.Category == -4) {
+                        itemToChange = item;
+                    }
+                }
+
+                if (itemToChange != null) {
+                    itemGrabMenu.ItemsToGrabMenu.actualInventory.Remove(itemToChange);
+                    itemGrabMenu.ItemsToGrabMenu.actualInventory.Add(FishItem.itemToAdd);
+                }
+            }
         }
 
         /* GameEvents_OnUpdateTick
@@ -127,19 +147,45 @@ namespace RealiticFishing
 
             if (Game1.activeClickableMenu is ItemGrabMenu itemGrabMenu && e.Button == SButton.MouseLeft) {
 
-                int x = (int)e.Cursor.ScreenPixels.X;
-                int y = (int)e.Cursor.ScreenPixels.Y;
+                Item sourceItem = this.Helper.Reflection.GetField<Item>(itemGrabMenu, "sourceItem").GetValue();
 
-                if (itemGrabMenu.inventory.getItemAt(x, y) == null) {
+                if (sourceItem is Chest) {
 
-                    Item item = itemGrabMenu.ItemsToGrabMenu.leftClick(x, y, itemGrabMenu.heldItem, false);
+                    int x = (int)e.Cursor.ScreenPixels.X;
+                    int y = (int)e.Cursor.ScreenPixels.Y;
 
-                    if (item is FishItem) 
+                    if (itemGrabMenu.inventory.getItemAt(x, y) == null)
                     {
-                        (item as FishItem).AddToInventory();
-                        FishItem.itemInChestToUpdate = null;
-                    }
-                } 
+
+                        Item item = itemGrabMenu.ItemsToGrabMenu.leftClick(x, y, itemGrabMenu.heldItem, false);
+
+                        if (item is FishItem fishItem)
+                        {
+                            if (itemGrabMenu.trashCan.containsPoint(x, y))
+                            {
+                                item = null;
+                            }
+                            else
+                            {
+                                fishItem.AddToInventory();
+                            }
+
+                            FishItem.itemInChestToUpdate = null;
+
+                        }
+                        else
+                        {
+                            // Item is deleted as a result of ItemToGrabMenu.leftClick(), so add it to inventory
+                            Item itemWasAdded = itemGrabMenu.inventory.tryToAddItem(item);
+
+                            // Inventory was full, so keep it in chest
+                            if (itemWasAdded != null)
+                            {
+                                itemGrabMenu.ItemsToGrabMenu.tryToAddItem(item);
+                            }
+                        }
+                    }                    
+                }
             }
         }
 
