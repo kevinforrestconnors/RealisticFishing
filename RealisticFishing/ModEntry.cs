@@ -9,6 +9,8 @@ using StardewValley.Tools;
 using RealisticFishing;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
+using StardewValley.Minigames;
+using StardewValley.Objects;
 
 namespace RealiticFishing
 {
@@ -20,9 +22,6 @@ namespace RealiticFishing
         *********/
         /// <summary>The mod configuration.</summary>
         public static Random rand = new Random();
-         
-        public bool ShouldRunTests = false;
-        public bool RunningTests = false; 
 
         // Used to detect if the player is fishing.
         private SBobberBar Bobber;
@@ -30,8 +29,8 @@ namespace RealiticFishing
         // Handles the event handler logic.
         private bool BeganFishingGame = false;
         private bool EndedFishingGame = false;
-        private bool JustFished = false;
-        private int JustFishedTimeout = 0;
+        private bool PlayerReceivedFish = false;
+        private int whichFish;
 
         // Which direction the player was facing when they were fishing.  Used in ThrowFish.
         private int FishingDirection;
@@ -39,8 +38,11 @@ namespace RealiticFishing
         // The last fish caught.
         public Item FishCaught;
 
-        // The list of all fish caught today.
-        public List<String> AllFishCaughtToday;
+        // The FishingRod information
+        public bool fishWasCaught = false;
+
+        // The list of Tuple<name, uniqueID> of all the fish caught today. 
+        public List<Tuple<string, int>> AllFishCaughtToday;
 
         // How many fish have been caught today.
         public int NumFishCaughtToday;
@@ -53,6 +55,9 @@ namespace RealiticFishing
         // The population data structure
         public Dictionary<String, List<FishModel>> population;
 
+        public bool inventoryWasReconstructed = false;
+        public bool chestsWereReconstructed = false;
+
         /*********
         ** Public methods
         *********/
@@ -61,19 +66,23 @@ namespace RealiticFishing
         public override void Entry(IModHelper helper)
         {
             MenuEvents.MenuChanged += this.MenuEvents_MenuChanged;
+            MenuEvents.MenuClosed += this.MenuEvents_MenuClosed;
             GameEvents.UpdateTick += this.GameEvents_OnUpdateTick;
             ControlEvents.KeyPressed += this.ControlEvents_KeyPressed;
+            InputEvents.ButtonPressed += this.InputEvents_ButtonPressed;
             PlayerEvents.InventoryChanged += this.PlayerEvents_InventoryChanged;
             TimeEvents.AfterDayStarted += this.TimeEvents_AfterDayStarted;
             SaveEvents.AfterCreate += this.SaveEvents_AfterCreate;
             SaveEvents.AfterLoad += this.SaveEvents_AfterLoad;
             SaveEvents.BeforeSave += this.SaveEvents_BeforeSave;
+            SaveEvents.AfterSave += this.SaveEvents_AfterSave;
 
             Tests.ModEntryInstance = this;
 
-            if (this.ShouldRunTests)
+            if (Tests.ShouldRunTests)
             {
-                GameEvents.EighthUpdateTick += Tests.GameEvents_OnUpdateTickTests;
+                GameEvents.EighthUpdateTick += Tests.GameEvents_OnUpdateTick;
+                ControlEvents.KeyPressed += Tests.ControlEvents_KeyPressed;
             }
         }
 
@@ -87,8 +96,51 @@ namespace RealiticFishing
         */
         private void MenuEvents_MenuChanged(object sender, EventArgsClickableMenuChanged e)
         {
-            if (e.NewMenu is BobberBar menu)
-                this.Bobber = SBobberBar.ConstructFromBaseClass(menu);
+
+            if (e.NewMenu is BobberBar bobberBarMenu) {
+                this.Bobber = SBobberBar.ConstructFromBaseClass(bobberBarMenu);
+            } 
+        }
+
+        /* GameEvents_OnUpdateTick
+        * Triggers every time the menu changes.
+        * Detects the treasure menu, allowing custom fish to be generated even if treasure is caught too.
+        */
+        private void MenuEvents_MenuClosed(object sender, EventArgsClickableMenuClosed e)
+        {
+        }
+
+        /* ControlEvents_KeyPressed
+         * Triggers every a key is pressed.
+         * Used to play/pause tests.
+         */
+        private void ControlEvents_KeyPressed(object sender, EventArgsKeyPressed e)
+        {
+            if (e.KeyPressed.Equals(Keys.O) && Tests.ShouldRunTests)
+            {
+                Tests.RunningTests = !Tests.RunningTests;
+            }
+        }
+
+        private void InputEvents_ButtonPressed(object sender, EventArgsInput e)
+        {
+
+            if (Game1.activeClickableMenu is ItemGrabMenu itemGrabMenu && e.Button == SButton.MouseLeft) {
+
+                int x = (int)e.Cursor.ScreenPixels.X;
+                int y = (int)e.Cursor.ScreenPixels.Y;
+
+                if (itemGrabMenu.inventory.getItemAt(x, y) == null) {
+
+                    Item item = itemGrabMenu.ItemsToGrabMenu.leftClick(x, y, itemGrabMenu.heldItem, false);
+
+                    if (item is FishItem) 
+                    {
+                        (item as FishItem).AddToInventory();
+                        FishItem.itemInChestToUpdate = null;
+                    }
+                } 
+            }
         }
 
         /* TimeEvents_AfterDayStarted
@@ -100,7 +152,9 @@ namespace RealiticFishing
 
             List<String> changedFish = new List<String>();
 
-            foreach (String fishName in this.AllFishCaughtToday) {
+            foreach (Tuple<string, int> tuple in this.AllFishCaughtToday) {
+                string fishName = tuple.Item1;
+
                 changedFish.Add(fishName);
 
                 List<FishModel> fishOfType;
@@ -114,14 +168,14 @@ namespace RealiticFishing
                 this.population[fishName] = fishOfType;
             }
 
-            foreach (Tuple<String, int, int, int> fish in this.fp.AllFish) {
-                if (this.fp.IsAverageFishBelowValue(fish.Item1)) {
-                    this.OnFishAtCriticalLevel(fish.Item1);
+            foreach (Tuple<int, string, int, int, int> fish in this.fp.AllFish) {
+                if (this.fp.IsAverageFishBelowValue(fish.Item2)) {
+                    this.OnFishAtCriticalLevel(fish.Item2);
                 }
             }
 
             this.NumFishCaughtToday = 0;
-            this.AllFishCaughtToday = new List<String>();
+            this.AllFishCaughtToday = new List<Tuple<string, int>>();
 
             this.Monitor.Log("TimeEvents_AfterDayStarted: " + this.fp.PrintChangedFish(changedFish));
         }
@@ -130,13 +184,17 @@ namespace RealiticFishing
          * Triggers after a save file is updated. 
          * Used to retrieve data and seed the population of fish.
          */
-        private void SaveEvents_AfterCreate(object sender, EventArgs e) {
-            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
+        private void SaveEvents_AfterCreate(object sender, EventArgs e) 
+        {
+            this.Monitor.Log("SaveEvents_AfterLoad");
 
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
+      
             this.NumFishCaughtToday = instance.NumFishCaughtToday;
             this.AllFishCaughtToday = instance.AllFishCaughtToday;
             this.fp = instance.fp;
             this.population = instance.fp.population;
+            this.fp.CurrentFishIDCounter = instance.CurrentFishIDCounter;
 
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
 
@@ -149,12 +207,27 @@ namespace RealiticFishing
         */
         private void SaveEvents_AfterLoad(object sender, EventArgs e)
         {
+            this.Monitor.Log("SaveEvents_AfterLoad");
+
             RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
 
             this.NumFishCaughtToday = instance.NumFishCaughtToday;
             this.AllFishCaughtToday = instance.AllFishCaughtToday;
             this.fp = instance.fp;
             this.population = instance.fp.population;
+            this.fp.CurrentFishIDCounter = instance.CurrentFishIDCounter;
+
+            // Recover items in inventory
+            if (!this.inventoryWasReconstructed) 
+            {
+                this.RecoverItemsInInventory(instance);
+            }
+
+            // Recover items in chests
+            if (!this.chestsWereReconstructed)
+            {
+                this.RecoverItemsInChests(instance);
+            }
 
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
 
@@ -172,13 +245,81 @@ namespace RealiticFishing
         private void SaveEvents_BeforeSave(object sender, EventArgs e)
         {
             RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json");
+
             instance.NumFishCaughtToday = this.NumFishCaughtToday;
             instance.AllFishCaughtToday = this.AllFishCaughtToday;
             instance.fp = this.fp;
             instance.population = this.fp.population;
+            instance.CurrentFishIDCounter = this.fp.CurrentFishIDCounter;
+
+            instance.inventory.Clear();
+
+            // Save items in inventory
+            for (int index = 0; index < Game1.player.maxItems; ++index)
+            {
+                if (index < Game1.player.items.Count && Game1.player.items[index] != null)
+                {
+                    Item item = Game1.player.items[index];
+                    if (item is FishItem) {
+                        instance.inventory.Add(new Tuple<int, List<FishModel>>(item.ParentSheetIndex, (item as FishItem).FishStack));
+                        Game1.player.removeItemFromInventory(item);
+                    }
+                }
+            }
+
+            instance.chests.Clear();
+
+            // Save items in chests
+            foreach (GameLocation location in Game1.locations) {
+
+                var chestsInLocation = new Dictionary<Vector2, List<Tuple<int, List<FishModel>>>>();
+
+                foreach (StardewValley.Object worldObject in location.objects.Values) {
+
+                    var fishInChest = new List<Tuple<int, List<FishModel>>>();
+
+                    if (worldObject is Chest) {
+
+                        foreach (Item item in (worldObject as Chest).items) {
+
+                            if (item is FishItem) {
+                                fishInChest.Add(new Tuple<int, List<FishModel>>(item.ParentSheetIndex, (item as FishItem).FishStack));
+                                (worldObject as Chest).items.Remove(item);
+                            }
+                        }
+
+                        chestsInLocation.Add(worldObject.TileLocation, fishInChest);
+                    }
+                }
+
+                instance.chests.Add(location.Name, chestsInLocation);
+            }
+
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
 
+            this.inventoryWasReconstructed = false;
+            this.chestsWereReconstructed = false;
+
             this.Monitor.Log("BeforeSave: " + instance.fp.PrintChangedFish(new List<String>()));
+        }
+
+        private void SaveEvents_AfterSave(object sender, EventArgs e)
+        {
+            this.Monitor.Log("SaveEvents_AfterSave");
+
+            RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
+
+            if (!this.inventoryWasReconstructed)
+            {
+                this.RecoverItemsInInventory(instance);
+            }
+
+            // Recover items in chests
+            if (!this.chestsWereReconstructed)
+            {
+                this.RecoverItemsInChests(instance);
+            }
+
         }
 
         /* GameEvents_OnUpdateTick
@@ -188,14 +329,50 @@ namespace RealiticFishing
         private void GameEvents_OnUpdateTick(object sender, EventArgs e)
         {
 
-            if (this.JustFishedTimeout == -1) {
-                // Do nothing
-            } else if (this.JustFishedTimeout == 1000) {
-                this.JustFished = false;
-                this.JustFishedTimeout = -1;
-            } else {
-                this.JustFishedTimeout++; 
+            if (Game1.player.CurrentTool is FishingRod)
+            {
+
+                var rod = Game1.player.CurrentTool as FishingRod;
+
+                if (rod.fishCaught && !this.PlayerReceivedFish)
+                {
+
+                    // Prevents the mod from giving the player 1 fish per tick ;)
+                    this.PlayerReceivedFish = true;
+
+                    this.whichFish = this.Helper.Reflection.GetField<int>(rod, "whichFish").GetValue();
+
+                    // construct a temporary fish item to figure out what the caught fish's name is
+                    FishItem tempFish = new FishItem(this.whichFish);
+
+                    if (tempFish.Category == -4) { // is a fish
+                        
+                        // get the list of fish in the Population with that name
+                        List<FishModel> fishOfType;
+                        this.population.TryGetValue(tempFish.Name, out fishOfType);
+
+                        // get a random fish of that type from the population
+                        int numFishOfType = fishOfType.Count;
+                        int selectedFishIndex = ModEntry.rand.Next(0, numFishOfType);
+                        FishModel selectedFish = fishOfType[selectedFishIndex];
+
+                        this.Helper.Reflection.GetField<int>(rod, "fishSize").SetValue((int)Math.Round(selectedFish.length));
+
+                        // store a new custom fish item
+                        Item customFish = (Item)new FishItem(this.whichFish, selectedFish);
+                        FishItem.itemToAdd = customFish as FishItem;
+                        ((FishItem)customFish).AddToInventory();
+                        this.FishCaught = customFish;
+
+                        // make sure the fish in the ocean will be regenerated at the end of the day
+                        this.AllFishCaughtToday.Add(new Tuple<string, int>(selectedFish.name, selectedFish.uniqueID));
+
+                        // Prompt the player to throw back the fish
+                        this.PromptThrowBackFish(selectedFish.name, selectedFish.uniqueID);  
+                    }
+                }
             }
+
 
             if (Game1.activeClickableMenu is BobberBar && this.Bobber != null) {
 
@@ -203,6 +380,7 @@ namespace RealiticFishing
 
                 if (!this.BeganFishingGame) {
                     this.OnFishingBegin();
+                    this.PlayerReceivedFish = false;
                     this.BeganFishingGame = true;
                 }
 
@@ -211,26 +389,11 @@ namespace RealiticFishing
                 this.OnFishingEnd();
                 this.EndedFishingGame = false;
 
-            } else {
-                
-                if (this.BeganFishingGame) {
+            } else if (this.BeganFishingGame) {{}
                     
-                    this.EndedFishingGame = true;
-                    this.BeganFishingGame = false;
-                }
+                this.EndedFishingGame = true;
+                this.BeganFishingGame = false;
             }
-        }
-
-        /* ControlEvents_KeyPressed
-         * Triggers every a key is pressed.
-         * Used to play/pause tests.
-         */
-        private void ControlEvents_KeyPressed(object sender, EventArgsKeyPressed e)
-        {
-            if (e.KeyPressed.Equals(Keys.O) && Tests.ShouldRunTests) {
-                Tests.RunningTests = !Tests.RunningTests;
-            }
-
         }
 
         /* PlayerEvents_InventoryChanged
@@ -239,61 +402,125 @@ namespace RealiticFishing
          * If the player caught treasure, waits until the player gains the fish and this executes again when the player gains the fish.
          */
         private void PlayerEvents_InventoryChanged(object sender, EventArgsInventoryChanged e) {
+            
+            foreach (ItemStackChange i in e.Added) 
+            {
 
-            if (this.JustFished) { // Player finished fishing
-
-                this.JustFished = false;
-
-                if (e.Added.Count > 0) {
-                    // Item.Category == -4 tests if item is a fish.
-                    if (e.Added[0].Item.Category == -4) {
-                        this.FishCaught = e.Added[0].Item;
-                        this.OnFishCaught(this.FishCaught);
+                // Item.Category == -4 tests if item is a fish.
+                if (i.Item.Category == -4)
+                {
+                    if (!(i.Item is FishItem fishItem))
+                    {
+                        Game1.player.removeItemFromInventory(i.Item);
                     } else {
-                        return;
+
+                        if (fishItem.recoveredFromInventory)
+                        {
+                            fishItem.recoveredFromInventory = false;
+                        } else {
+
+                            if (FishItem.itemInChestToUpdate != null) {
+
+                                fishItem.FishStack = FishItem.itemInChestToUpdate.FishStack.GetRange(FishItem.itemInChestToUpdate.FishStack.Count - i.Item.Stack, i.Item.Stack);
+                                FishItem.itemInChestToUpdate.checkIfStackIsWrong();
+                                FishItem.itemInChestToUpdate = null;
+
+                            }
+                        }
                     }
-                } else if (e.QuantityChanged.Count > 0) {
-                    // Item.Category == -4 tests if item is a fish.
-                    if (e.QuantityChanged[0].Item.Category == -4) {
-                        this.FishCaught = e.QuantityChanged[0].Item;
-                        this.OnFishCaught(this.FishCaught);
-                    } else {
-                        return;
-                    }
-                } else {
-                    return;
                 }
+            }
 
-                this.PromptThrowBackFish();
+            foreach (ItemStackChange i in e.Removed) 
+            {
+                // Item.Category == -4 tests if item is a fish.
+                if (i.Item.Category == -4) 
+                {
+
+                    if (i.Item is FishItem fishItem) {
+
+                        FishItem.itemToAdd = new FishItem(fishItem.Id);
+                        FishItem.itemToAdd.FishStack = fishItem.FishStack;
+                    }
+                }
+            }
+
+            foreach (ItemStackChange i in e.QuantityChanged)
+            {
+                // Item.Category == -4 tests if item is a fish.
+                if (i.Item.Category == -4)
+                {
+                    if (!(i.Item is FishItem fishItem))
+                    {
+                        // Used to remove the basic fish item without removing the FishItem custom item
+                        i.Item.Stack -= i.StackChange;
+                    }
+                    else
+                    {
+
+                        if (i.StackChange < 0)
+                        {
+                            
+                            this.Monitor.Log("\nStackchange negative: remaining i.Item.Stack = " + i.Item.Stack);
+
+                            int numRemoved = Math.Abs(i.StackChange);
+
+                            FishItem.itemToAdd = new FishItem(fishItem.Id);
+                            FishItem.itemToAdd.FishStack = fishItem.FishStack.GetRange(fishItem.FishStack.Count - numRemoved, numRemoved);
+
+                            if (FishItem.itemInChestToFix != null) {
+                                FishItem.itemInChestToFix.FishStack = FishItem.itemToAdd.FishStack;
+                                FishItem.itemInChestToFix = null;
+                            }
+
+                            fishItem.FishStack.RemoveRange(fishItem.FishStack.Count - numRemoved, numRemoved);
+
+                        } else if (i.StackChange > 0) {
+
+                            if (i.StackChange == 1) {
+                                
+                                if (FishItem.itemInChestToFix != null)
+                                {
+                                    FishItem.itemInChestToUpdate.checkIfStackIsWrong();
+                                    fishItem.FishStack.AddRange(FishItem.itemInChestToFix.FishStack);
+                                    FishItem.itemInChestToUpdate = null;
+                                    FishItem.itemInChestToFix = null;
+                                }
+                            } else {
+
+                                if (Game1.activeClickableMenu is ItemGrabMenu && FishItem.itemInChestToUpdate != null)
+                                {
+                                    fishItem.FishStack.AddRange(FishItem.itemInChestToUpdate.FishStack.GetRange(FishItem.itemInChestToUpdate.FishStack.Count - i.StackChange, i.StackChange));
+                                    FishItem.itemInChestToUpdate.checkIfStackIsWrong();
+                                    FishItem.itemInChestToUpdate = null;
+                                    FishItem.itemInChestToFix = null;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (FishItem.itemToChange != null) {
+
+                FishItem.itemToChange.FishStack.AddRange(FishItem.itemToAdd.FishStack);
+                FishItem.itemToChange = null;
             }
         }
 
         /* OnFishingEnd
         * Triggers once when the fishing minigame starts.  
-        * Put function calls here, not iterative style code.
         */
         private void OnFishingBegin() {
-            this.JustFished = false;
             this.Monitor.Log("Fishing has begun.");
             this.FishingDirection = Game1.player.FacingDirection;
         }
 
         /* OnFishingEnd
          * Triggers once after the player catches a fish (not on trash)
-         * Put function calls here, not iterative style code.
          */
         private void OnFishingEnd() {
             this.Monitor.Log("Fishing has ended.");
-            this.JustFishedTimeout = 0;
-            this.JustFished = true;
-        }
-
-        /* OnFishCaught
-         * Triggers once after the player actually receives the fish in their inventory.
-         * Put function calls here, not iterative style code.
-         */
-        private void OnFishCaught(Item fish) {
-            this.AllFishCaughtToday.Add(fish.Name);
         }
 
         /* OnFishAtCriticalLevel
@@ -308,10 +535,10 @@ namespace RealiticFishing
          * Triggers every time the player catches a fish while they are still under the quota.
          * Calls ThrowBackFish as a callback to handle the choice made.
          */
-        private void PromptThrowBackFish() {
+        private void PromptThrowBackFish(string fishName, int fishID) {
 
             if (this.NumFishCaughtToday >= this.FishQuota) {
-
+                
                 this.ThrowBackFish(Game1.player, "Yes");
 
             } else {
@@ -323,7 +550,16 @@ namespace RealiticFishing
                     new Response("No", "No")
                 };
 
-                Game1.currentLocation.createQuestionDialogue(dialogue, answerChoices, new GameLocation.afterQuestionBehavior(this.ThrowBackFish));
+                Game1.currentLocation.createQuestionDialogue(dialogue, answerChoices, new GameLocation.afterQuestionBehavior(delegate (Farmer who, string whichAnswer) {
+                    if (this.ThrowBackFish(who, whichAnswer)) {
+                        
+                        List<FishModel> fishOfType;
+                        this.population.TryGetValue(fishName, out fishOfType);
+
+                        FishModel selectedFish = fishOfType.Find((FishModel obj) => obj.uniqueID == fishID);
+                        fishOfType.Remove(selectedFish);
+                    }
+                }));
             }
         }
 
@@ -331,70 +567,40 @@ namespace RealiticFishing
          * Triggers every time the player catches a fish while they are still under the quota.
          * If whichAnswer == "Yes", removes the fish from the inventory and calls ThrowFish
          */
-        private void ThrowBackFish(Farmer who, string whichAnswer) {
-            
-            Item fish = this.FishCaught.getOne();
+        private bool ThrowBackFish(Farmer who, string whichAnswer) {
 
             if (whichAnswer == "Yes") {
 
+                Item fish = this.FishCaught.getOne();
+
+                if (this.AllFishCaughtToday.Count > 0) {
+                    this.AllFishCaughtToday.RemoveAt(this.AllFishCaughtToday.Count - 1);
+                }
+
                 this.FishCaught.Stack--;
+
+                if ((this.FishCaught as FishItem).FishStack.Count > 0) {
+                    (this.FishCaught as FishItem).FishStack.RemoveAt((this.FishCaught as FishItem).FishStack.Count - 1);
+                }
 
                 if (this.FishCaught.Stack <= 0)
                 {
                     Game1.player.removeItemFromInventory(this.FishCaught);
                 }
                 this.ThrowFish(fish, who.getStandingPosition(), this.FishingDirection, (GameLocation)null, -1);
+                return true;
 
             } else if (whichAnswer == "No") {
 
                 this.NumFishCaughtToday++;
-                this.RemoveFishFromOcean(fish);
-
-                Game1.player.removeItemFromInventory(this.FishCaught);
-
-                List<FishModel> fishOfType;
-                this.population.TryGetValue(fish.Name, out fishOfType);
-
-                int numFishOfType = fishOfType.Count;
-                int selectedFishIndex = ModEntry.rand.Next(0, numFishOfType);
-
-                FishModel selectedFish = fishOfType[selectedFishIndex];
-
-                Item customFish = (Item)new FishItem(fish.parentSheetIndex, fish.Name, selectedFish.minLength, selectedFish.maxLength, selectedFish.length, selectedFish.quality, 1);
-
-                Game1.player.addItemToInventory(customFish);
 
                 if (this.NumFishCaughtToday == this.FishQuota) {
                     Game1.addHUDMessage(new HUDMessage("You have reached the fishing limit for today."));
                 }
+                return false;
+            } else {
+                return false;
             }
-        }
-
-        /* RemoveFishFromOcean
-         * Removes a fish with name <fishName> from the fish population - <this.fp>
-         */
-        private void RemoveFishFromOcean(String fishName)
-        {
-
-            // Prints the number of fish of this type before removing it
-            List<String> changedFish = new List<String>();
-            changedFish.Add(fishName);
-            this.Monitor.Log("RemoveFishFromOcean: " + this.fp.PrintChangedFish(changedFish));
-
-            List<FishModel> fishOfType;
-            this.population.TryGetValue(fishName, out fishOfType);
-
-            int numFishOfType = fishOfType.Count;
-            int selectedFish = ModEntry.rand.Next(0, numFishOfType);
-
-            fishOfType.RemoveAt(selectedFish);
-
-            this.Monitor.Log("RemoveFishFromOcean: " + this.fp.PrintChangedFish(changedFish));
-        }
-
-        private void RemoveFishFromOcean(Item fish)
-        {
-            RemoveFishFromOcean(fish.Name);
         }
 
         /* ThrowFish
@@ -434,6 +640,61 @@ namespace RealiticFishing
             if (groundLevel != -1)
                 debris.chunkFinalYLevel = groundLevel;
             location.debris.Add(debris);
+        }
+
+        private void RecoverItemsInChests(RealisticFishingData instance) {
+            
+            this.chestsWereReconstructed = true;
+
+            foreach (GameLocation location in Game1.locations)
+            {
+
+                if (instance.chests.ContainsKey(location.Name))
+                {
+                    var chestsInLocation = instance.chests[location.Name];
+
+                    foreach (StardewValley.Object worldObject in location.objects.Values)
+                    {
+
+                        if (worldObject is Chest)
+                        {
+                            if (chestsInLocation.ContainsKey(worldObject.TileLocation))
+                            {
+
+                                foreach (Tuple<int, List<FishModel>> f in chestsInLocation[worldObject.TileLocation])
+                                {
+                                    int id = f.Item1;
+                                    var fishStack = f.Item2;
+
+                                    var itemToBeAdded = new FishItem(id, fishStack[0]);
+                                    itemToBeAdded.Stack = fishStack.Count;
+                                    itemToBeAdded.FishStack = fishStack;
+
+                                    (worldObject as Chest).items.Add(itemToBeAdded);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void RecoverItemsInInventory(RealisticFishingData instance) {
+
+            this.inventoryWasReconstructed = true;
+
+            foreach (Tuple<int, List<FishModel>> f in instance.inventory)
+            {
+                int id = f.Item1;
+                var fishStack = f.Item2;
+
+                var itemToBeAdded = new FishItem(id, fishStack[0]);
+                itemToBeAdded.Stack = fishStack.Count;
+                itemToBeAdded.FishStack = fishStack;
+                itemToBeAdded.recoveredFromInventory = true;
+
+                itemToBeAdded.AddToInventory();
+            }
         }
     }
 }

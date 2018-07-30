@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using RealiticFishing;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
@@ -13,56 +14,85 @@ namespace RealisticFishing
     public class FishPopulation
     {
 
-        public Dictionary<String, List<FishModel>> population;
-
-        public List<Tuple<String, int, int, int>> AllFish;
+        public int CurrentFishIDCounter;
+        public Dictionary<string, List<FishModel>> population;
+        public List<Tuple<int, string, int, int, int>> AllFish;
 
         public FishPopulation()
         {
 
-            this.AllFish = new List<Tuple<String, int, int, int>>();
+            this.CurrentFishIDCounter = 0;
 
-            foreach (KeyValuePair<int, string> item in Game1.content.Load<Dictionary<int, string>>("Data\\Fish")) {
-                String[] fishFields = item.Value.Split('/');
+            this.AllFish = new List<Tuple<int, string, int, int, int>>();
 
-                if (fishFields[1] != "trap" && fishFields[0] != "Green Algae" && fishFields[0] != "White Algae" && fishFields[0] != "Seaweed") {
-                    this.AllFish.Add(new Tuple<string, int, int, int>(fishFields[0], int.Parse(fishFields[3]), int.Parse(fishFields[4]), 1));
+            foreach (KeyValuePair<int, string> item in Game1.content.Load<Dictionary<int, string>>("Data\\Fish"))
+            {
+                string[] fishFields = item.Value.Split('/');
+
+                if (fishFields[1] != "trap" && fishFields[0] != "Green Algae" && fishFields[0] != "White Algae" && fishFields[0] != "Seaweed")
+                {
+                    this.AllFish.Add(new Tuple<int, string, int, int, int>(item.Key, fishFields[0] + " ", int.Parse(fishFields[3]), int.Parse(fishFields[4]), 1));
                 }
             }
 
-            this.population = new Dictionary<String, List<FishModel>>();
+            this.population = new Dictionary<string, List<FishModel>>();
 
 
             Random rand = new Random();
 
-            for (int i = 0; i < this.AllFish.Count; i++) {
+            for (int i = 0; i < this.AllFish.Count; i++)
+            {
 
                 List<FishModel> thisFishPopulation = new List<FishModel>();
 
                 int populationSize = 50;
 
-                for (int j = 0; j < populationSize; j++) {
-                    String name = this.AllFish[i].Item1;
-                    int minLength = this.AllFish[i].Item2;
-                    int maxLength = this.AllFish[i].Item3;
-                    int quality = this.AllFish[i].Item4;
+                for (int j = 0; j < populationSize; j++)
+                {
+                    string name = this.AllFish[i].Item2;
+                    int minLength = this.AllFish[i].Item3;
+                    int maxLength = this.AllFish[i].Item4;
+
+                    int quality;
+                    double r = rand.NextDouble();
+
+                    if (r > 0.99)
+                    {
+                        quality = 4;
+                    }
+                    else if (r > 0.95)
+                    {
+                        quality = 2;
+                    }
+                    else if (r > 0.85)
+                    {
+                        quality = 1;
+                    }
+                    else
+                    {
+                        quality = 0;
+                    }
+
                     double length = EvolutionHelpers.GetMutatedFishLength((maxLength + minLength) / 2, minLength, maxLength);
 
-                    thisFishPopulation.Add(new FishModel(name, minLength, maxLength, length, quality));
+                    thisFishPopulation.Add(new FishModel(this.CurrentFishIDCounter, name, minLength, maxLength, length, quality));
+                    this.CurrentFishIDCounter++;
                 }
 
-                this.population.Add(this.AllFish[i].Item1, thisFishPopulation);
-            } 
+                this.population.Add(this.AllFish[i].Item2, thisFishPopulation);
+            }
         }
 
-        public double GetAverageLengthOfFish(String fishName) {
-            
+        public double GetAverageLengthOfFish(String fishName)
+        {
+
             List<FishModel> fishOfType;
             this.population.TryGetValue(fishName, out fishOfType);
 
             double avg = 0.0;
 
-            foreach (FishModel fish in fishOfType) {
+            foreach (FishModel fish in fishOfType)
+            {
                 avg += fish.length;
             }
 
@@ -71,7 +101,9 @@ namespace RealisticFishing
             return avg;
         }
 
-        public bool IsAverageFishBelowValue(String fishName, double value = 0.66) {
+        // todo choose better # for value
+        public bool IsAverageFishBelowValue(String fishName, double value = 0.66)
+        {
 
             double avgLength = this.GetAverageLengthOfFish(fishName);
 
@@ -79,22 +111,36 @@ namespace RealisticFishing
             this.population.TryGetValue(fishName, out fishOfType);
 
             double originalPopulationAverage = (fishOfType[0].minLength + fishOfType[0].maxLength) / 2;
-                
+
             return (avgLength / originalPopulationAverage) < value;
         }
 
-        public String PrintChangedFish(List<String> filter) {
+        public bool IsAverageFishAboveValue(String fishName, double value = 0.66)
+        {
+
+            double avgLength = this.GetAverageLengthOfFish(fishName);
+
+            List<FishModel> fishOfType;
+            this.population.TryGetValue(fishName, out fishOfType);
+
+            double originalPopulationAverage = (fishOfType[0].minLength + fishOfType[0].maxLength) / 2;
+
+            return (avgLength / originalPopulationAverage) > (1 + value / 2);
+        }
+
+        public String PrintChangedFish(List<String> filter)
+        {
             String ret = "";
 
             for (int i = 0; i < this.AllFish.Count; i++)
             {
 
-                String fishName = this.AllFish[i].Item1;
+                string fishName = this.AllFish[i].Item2;
 
                 List<FishModel> fishOfType;
                 this.population.TryGetValue(fishName, out fishOfType);
 
-                if (fishOfType.Count > 0 && (filter.Contains(fishName) || filter.Count == 0)) 
+                if (fishOfType.Count > 0 && (filter.Contains(fishName) || filter.Count == 0))
                 {
                     ret += fishOfType[0].name + " | Number of Fish: " + fishOfType.Count + " | Average Length: " + this.GetAverageLengthOfFish(fishName) + "\n";
                 }

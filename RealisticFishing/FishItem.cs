@@ -2,49 +2,74 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using RealiticFishing;
 using StardewValley;
 using StardewValley.Objects;
-using StardewValley.Tools;
+
 
 namespace RealisticFishing
 {
+
     public class FishItem : StardewValley.Object
     {
-        public int MinLength;
-        public int MaxLength;
-        public double Length;
-        public int DisplayLength;
+        public int Id;
+        public List<FishModel> FishStack = new List<FishModel>();
 
-        public int stackSize;
-        public String description;
+        public Boolean recoveredFromInventory = false;
 
-        public FishItem(int id, String name, int minLength, int maxLength, double length, int quality, int stackSize) 
-            : base(id, 1, false, -1, quality)
+        public static FishItem itemToAdd;
+        public static FishItem itemInChestToFix;
+        public static FishItem itemInChestToUpdate;
+        public static FishItem itemToChange;
+
+        public String Description;
+
+        public FishItem(int id) 
+            : base(id, 1, false, -1, 1) 
         {
-            this.Name = name;
-            this.MinLength = minLength;
-            this.MaxLength = maxLength;
-            this.Length = length;
-            this.DisplayLength = (int)Math.Round(this.Length);
-            this.Quality = quality;
-            this.description = base.getDescription();
-            this.stackSize = stackSize;
-            this.Category = -4;
 
-            // Allows the item to be sold
-            // TODO: THIS
-
-            // Changes the price to scale off length
-            this.Price = (int)(base.Price * (this.DisplayLength / 5));
+            this.Name += " ";
+            this.Id = id;
+            this.Description = base.getDescription();
+            this.FishStack.Add(new FishModel(-1, this.Name, -1, -1, 0, 1));
         }
 
-        public override string DisplayName { get => this.Name; set => this.Name = value; }
-        public override int Stack { get => this.stackSize; set => this.stackSize = value; }
-
-
-        public override int addToStack(int amount)
+        public FishItem(int id, FishModel fish) 
+            : base(id, 1, false, -1, fish.quality)
         {
-            return 1;
+
+            this.Name += " ";
+            this.Id = id;
+            this.Description = base.getDescription();
+
+            this.FishStack.Add(fish);
+        }
+
+        public void AddToInventory()
+        {
+
+            Item item = this;
+            FishItem fishItem = item as FishItem;
+
+            for (int index = 0; index < (int)(Game1.player.maxItems); ++index)
+            {
+                // Adding to a non-empty inventory slot
+                if (index < Game1.player.items.Count && Game1.player.items[index] != null && (Game1.player.items[index].maximumStackSize() != -1 && Game1.player.items[index].getStack() < Game1.player.items[index].maximumStackSize()) && Game1.player.items[index].Name.Equals(item.Name) && ((!(item is StardewValley.Object) || !(Game1.player.items[index] is StardewValley.Object) || (item as StardewValley.Object).quality.Value == (Game1.player.items[index] as StardewValley.Object).quality.Value && (item as StardewValley.Object).parentSheetIndex.Value == (Game1.player.items[index] as StardewValley.Object).parentSheetIndex.Value) && item.canStackWith(Game1.player.items[index])))
+                {
+                    (Game1.player.items[index] as FishItem).Stack += fishItem.Stack;
+                    (Game1.player.items[index] as FishItem).FishStack.AddRange(fishItem.FishStack);
+                    return;
+                }
+            }
+            for (int index = 0; index < (int)(Game1.player.maxItems); ++index)
+            {
+                // Adding to an empty inventory slot
+                if (Game1.player.items.Count > index && Game1.player.items[index] == null)
+                {
+                    Game1.player.items[index] = item;
+                    return;
+                }
+            }
         }
 
         public override void drawInMenu(SpriteBatch spriteBatch, Vector2 location, float scaleSize, float transparency, float layerDepth, bool drawStackNumber, Color color, bool drawShadow)
@@ -52,50 +77,93 @@ namespace RealisticFishing
             base.drawInMenu(spriteBatch, location, scaleSize, transparency, layerDepth, drawStackNumber, color, drawShadow);
         }
 
+        public override Item getOne() {
+
+            this.checkIfStackIsWrong();
+
+            if (this.FishStack.Count > 0) {
+                
+                FishItem one = new FishItem(this.Id, this.FishStack[this.FishStack.Count - 1]);
+                FishItem.itemInChestToFix = one;
+                FishItem.itemInChestToUpdate = this;
+
+                return (Item)one;
+            } else {
+                Tests.ModEntryInstance.Monitor.Log("Something went wrong!");
+                throw new MissingMemberException();
+            }
+        }
+
         public override string getDescription()
         {
-            return this.description + " " + this.DisplayLength.ToString() + " in. long.";
+
+            if (this.FishStack.Count == 1) {
+                return this.Description + " This one is " + ((int)Math.Round(this.FishStack[0].length)).ToString() + " in. long.";
+            }
+
+            string lengths = "";
+
+            int count = 0;
+            int max = 10;
+
+            //this.FishStack.Reverse();
+
+            foreach (FishModel fish in this.FishStack) {
+
+                if (count == 0) {
+                    lengths += ((int)Math.Round(fish.length)).ToString();
+                } else {
+                    lengths += ", " + ((int)Math.Round(fish.length)).ToString();
+                }
+
+                count++;
+
+                if (count == max) {
+                    break;
+                }
+            }
+
+            //this.FishStack.Reverse();
+
+            if (count > max) {
+                return this.Description + "This stack contains " + this.Name + "of length: \n" + lengths + "\n...(truncated)";
+            } else {
+                return this.Description + "This stack contains " + this.Name + "of length: \n" + lengths;   
+            }
         }
 
-        public override Item getOne()
+        public override int sellToStorePrice()
         {
-            return (Item)this;
+            double p = 0;
+
+            foreach (FishModel fish in this.FishStack)
+            {
+                p += base.Price * (fish.length / 5) * fish.quality;
+            }
+
+            p /= this.FishStack.Count;
+
+            return (int)Math.Round(p);
         }
 
-        public override int getStack()
-        {
-            return this.Stack;
-        }
+        public override int addToStack(int amount) {
 
-        public override bool isPlaceable()
-        {
-            return false;
-        }
+            FishItem.itemToChange = this;
 
-        public override int maximumStackSize()
-        {
-            return 999;
-        }
-
-        public override int salePrice()
-        {
-            return base.salePrice();
-        }
-
-        public override bool canBeTrashed()
-        {
-            return base.canBeTrashed();
-        }
-
-        public override string getCategoryName()
-        {
-            return base.getCategoryName();
+            return base.addToStack(amount);
         }
 
         public override bool canStackWith(Item other)
         {
-            return true;
-            //return base.canStackWith(other) && this.Name == other.Name;
+            return base.canStackWith(other) && other is FishItem;
+        }
+
+        public void checkIfStackIsWrong() {
+            
+            if (this.FishStack.Count > this.Stack)
+            {
+                this.FishStack.RemoveRange(this.Stack, this.FishStack.Count - this.Stack);
+            }
         }
     }
 }

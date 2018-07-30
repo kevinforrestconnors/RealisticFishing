@@ -8,76 +8,54 @@ using StardewValley.Menus;
 using StardewValley.Tools;
 using System.Collections.Generic;
 using RealiticFishing;
+using Microsoft.Xna.Framework.Input;
 
 namespace RealisticFishing
 {
     public static class Tests
     {
         
-        public static bool ShouldRunTests = false;
-        public static bool RunningTests = false;
-
-        private static bool PopulationChangesBasedOnOverFishingCatchBiggestFishOnly = true;
+        public static bool ShouldRunTests = true;
+        public static bool RunningTests = true;
 
         private static Random rand = new Random();
 
         public static ModEntry ModEntryInstance;
 
-        public static void GameEvents_OnUpdateTickTests(object sender, EventArgs e) {
+        public static void GiveFish() {
+
+            string fishName = ModEntryInstance.fp.AllFish[0].Item2;
+
+            // get the list of fish in the Population with that name
+            List<FishModel> fishOfType;
+            ModEntryInstance.population.TryGetValue(fishName, out fishOfType);
+
+            // get a random fish of that type from the population
+            int numFishOfType = fishOfType.Count;
+            int selectedFishIndex = ModEntry.rand.Next(0, numFishOfType);
+            FishModel selectedFish = fishOfType[selectedFishIndex];
+
+            // store a new custom fish item
+            Item customFish = (Item)new FishItem(ModEntryInstance.fp.AllFish[0].Item1, selectedFish);
+            FishItem.itemToAdd = customFish as FishItem;
+            ((FishItem)customFish).AddToInventory();
+            ModEntryInstance.FishCaught = customFish;
+        }
+
+        public static void GameEvents_OnUpdateTick(object sender, EventArgs e) 
+        {
             if (Tests.RunningTests) {
-                Tests.PopulationChangesBasedOnOverFishing();  
+
             }
         }
 
-        private static void PopulationChangesBasedOnOverFishing()
+        public static void ControlEvents_KeyPressed(object sender, EventArgsKeyPressed e)
         {
-
-            // Remove a random fish of a weighted random length (leaning towards big fish)
-            int numFish = ModEntryInstance.fp.AllFish.Count;
-            var randomFish = ModEntryInstance.fp.AllFish[rand.Next(0, numFish)];
-            ModEntryInstance.AllFishCaughtToday.Add(randomFish.Item1);
-
-            double previousAvgLength = ModEntryInstance.fp.GetAverageLengthOfFish(randomFish.Item1);
-            ModEntryInstance.Monitor.Log("Average Length of : " + randomFish.Item1 + " : " + previousAvgLength);
-
-            List<FishModel> fishOfType;
-            ModEntryInstance.population.TryGetValue(randomFish.Item1, out fishOfType);
-
-            // Sort by length, ascending
-            fishOfType.Sort();
-
-            int numFishOfType = fishOfType.Count;
-            // Selects a weighted average, leaning towards longer fish
-            int selectedFish = rand.Next(rand.Next(0, numFishOfType), numFishOfType);
-
-            if (Tests.PopulationChangesBasedOnOverFishingCatchBiggestFishOnly) {
-                selectedFish = fishOfType.Count - 1;
+            if (Tests.RunningTests) {
+                if (e.KeyPressed.Equals(Keys.G)) {
+                    Tests.GiveFish();
+                }
             }
-
-            fishOfType.RemoveAt(selectedFish);
-
-            double currentAvgLength = ModEntryInstance.fp.GetAverageLengthOfFish(randomFish.Item1);
-            ModEntryInstance.Monitor.Log("Average Length of : " + randomFish.Item1 + " : " + currentAvgLength);
-
-            // Add a fish back that mutates from a random individual
-            List<String> changedFish = new List<String>();
-
-            foreach (String fishName in ModEntryInstance.AllFishCaughtToday)
-            {
-                changedFish.Add(fishName);
-
-                List<FishModel> fishOfType2;
-                ModEntryInstance.population.TryGetValue(fishName, out fishOfType2);
-
-                int numFishOfType2 = fishOfType2.Count;
-                int selectedFish2 = rand.Next(0, numFishOfType2);
-
-                fishOfType2.Add(fishOfType2[selectedFish2].MakeBaby());
-
-                ModEntryInstance.population[fishName] = fishOfType2;
-            }
-
-            ModEntryInstance.AllFishCaughtToday = new List<string>();
         }
     }
 }

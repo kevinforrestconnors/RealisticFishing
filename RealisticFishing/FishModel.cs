@@ -8,7 +8,7 @@ namespace RealisticFishing
 {
     public class FishModel : IComparable<FishModel>
     {
-
+        public int uniqueID;
         public string name;
         public int minLength;
         public int maxLength;
@@ -16,8 +16,9 @@ namespace RealisticFishing
 
         public int quality;
 
-        public FishModel(string name, int minLength, int maxLength, double length, int quality)
+        public FishModel(int id, string name, int minLength, int maxLength, double length, int quality)
         {
+            this.uniqueID = id;
             this.name = name;
             this.minLength = minLength;
             this.maxLength = maxLength;
@@ -30,8 +31,14 @@ namespace RealisticFishing
             return this.length.CompareTo(o.length);
         }
 
-        public FishModel MakeBaby() {
-            return new FishModel(this.name, this.minLength, this.maxLength, EvolutionHelpers.GetMutatedFishLength(this.length, this.minLength, this.maxLength), this.quality);
+        public FishModel MakeBaby() 
+        {
+            return new FishModel(this.uniqueID, this.name, this.minLength, this.maxLength, EvolutionHelpers.GetMutatedFishLength(this.length, this.minLength, this.maxLength), this.quality);
+        }
+
+        public override string ToString() 
+        {
+            return this.name + " " + Math.Round(this.length);
         }
     }
 }
