@@ -117,8 +117,6 @@ namespace RealisticFishing
             int count = 0;
             int max = 10;
 
-            //this.FishStack.Reverse();
-
             foreach (FishModel fish in this.FishStack) {
 
                 if (count == 0) {
@@ -134,13 +132,25 @@ namespace RealisticFishing
                 }
             }
 
-            //this.FishStack.Reverse();
-
-            if (count > max) {
+            if (count >= max) {
                 return this.Description + "This stack contains " + this.Name + "of length: \n" + lengths + "\n...(truncated)";
             } else {
                 return this.Description + "This stack contains " + this.Name + "of length: \n" + lengths;   
             }
+        }
+
+        public override int salePrice() {
+
+            double p = 0;
+
+            foreach (FishModel fish in this.FishStack)
+            {
+                p += base.Price * (Math.Round(fish.length) / 10) * (fish.quality + 1);
+            }
+
+            p /= this.FishStack.Count;
+
+            return (int)Math.Round(p);
         }
 
         public override int sellToStorePrice()
@@ -149,10 +159,12 @@ namespace RealisticFishing
 
             foreach (FishModel fish in this.FishStack)
             {
-                p += base.Price * (fish.length / 5) * fish.quality;
+                p += base.Price * (Math.Round(fish.length) / 10) * (fish.quality + 1);
             }
 
             p /= this.FishStack.Count;
+
+
 
             return (int)Math.Round(p);
         }
