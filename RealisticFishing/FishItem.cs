@@ -17,10 +17,21 @@ namespace RealisticFishing
 
         public Boolean recoveredFromInventory = false;
 
+        // Used to set a FishStack of a FishItem in a chest when the FishItem was removed from the inventory
+        // and when a partial stack is added to a stack in a chest
+        // this technique is used because there is no event handler for "AddedToChest"
         public static FishItem itemToAdd;
+
+        // Set in FishItem.getOne().  Used to set the correct FishStack of an item that was partially removed
+        // from the inventory and put into a chest AND to set the correct FishStack of the newly added 
+        // FishItem in an inventory that had one stack worth of an item removed from a chest
         public static FishItem itemInChestToFix;
-        public static FishItem itemInChestToUpdate;
+
+        // The FishItem in a chest that has to be updated when FishItem.addToStack() is called
         public static FishItem itemToChange;
+
+        // Used for all other cases where the inventory interacts with a chest
+        public static FishItem itemInChestToUpdate;
 
         public String Description;
 

@@ -460,8 +460,6 @@ namespace RealiticFishing
 
                         if (i.StackChange < 0)
                         {
-                            
-                            this.Monitor.Log("\nStackchange negative: remaining i.Item.Stack = " + i.Item.Stack);
 
                             int numRemoved = Math.Abs(i.StackChange);
 
@@ -512,7 +510,6 @@ namespace RealiticFishing
         * Triggers once when the fishing minigame starts.  
         */
         private void OnFishingBegin() {
-            this.Monitor.Log("Fishing has begun.");
             this.FishingDirection = Game1.player.FacingDirection;
         }
 
@@ -520,7 +517,7 @@ namespace RealiticFishing
          * Triggers once after the player catches a fish (not on trash)
          */
         private void OnFishingEnd() {
-            this.Monitor.Log("Fishing has ended.");
+            
         }
 
         /* OnFishAtCriticalLevel
