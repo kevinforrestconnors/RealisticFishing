@@ -311,18 +311,34 @@ namespace RealiticFishing
 
             instance.quests.Clear();
 
+            foreach (Quest q in Game1.player.questLog)
+            {
+                if (q is RealisticFishingQuest rfq)
+                {
+                    instance.quests.Add(new Tuple<int, int, int>(rfq.id.Value, rfq.whichFish, rfq.numberFished));
+                }
+            }
+
+            // Remove unserializable RealisticFishingQuests from the quest log
+            Game1.player.questLog.Filter((Quest q) => !(q is RealisticFishingQuest));
+
             foreach (Tuple<int, string, int, int, int> fish in this.fp.AllFish)
             {
 
                 if (this.fp.IsAverageFishAboveValue(fish.Item2))
                 {
+                    bool alreadyAcceptedQuest = false;
 
-                    foreach (Quest q in Game1.player.questLog)
-                    {
-                        if (q is RealisticFishingQuest rfq)
-                        {
-                            instance.quests.Add(new Tuple<int, int, int>(rfq.id.Value, rfq.whichFish, rfq.numberFished));
+                    foreach (Tuple<int, int, int> instanceQuest in instance.quests) {
+
+                        if (fish.Item1 == instanceQuest.Item2) {
+                            alreadyAcceptedQuest = true;
                         }
+                    }
+
+                    if (!alreadyAcceptedQuest) {
+                        RealisticFishingQuest newQuest = new RealisticFishingQuest(fish.Item1);
+                        instance.quests.Add(new Tuple<int, int, int>(newQuest.id.Value, fish.Item1, 0));
                     }
                 }
             }
