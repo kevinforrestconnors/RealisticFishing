@@ -28,10 +28,10 @@ namespace RealisticFishing
             this.fish = new StardewValley.Object(whichFish, 1, false, -1, 0);
         }
 
-        //// recover an existing quest
-        //public RealisticFishingQuest(int whichFish, int numberFished) : this(whichFish) {
-        //    this.numberFished = numberFished;
-        //}
+        // recover an existing quest
+        public RealisticFishingQuest(int whichFish, int numberFished) : this(whichFish) {
+            this.numberFished = numberFished;
+        }
 
         public void loadQuestInfo()
         {
