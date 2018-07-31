@@ -56,6 +56,11 @@ namespace RealisticFishing
             this.FishStack.Add(fish);
         }
 
+        public override int maximumStackSize()
+        {
+            return 999;
+        }
+
         public void AddToInventory()
         {
 
