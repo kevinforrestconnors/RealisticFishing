@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
 using StardewValley.Minigames;
 using StardewValley.Objects;
+using StardewValley.Quests;
 
 namespace RealiticFishing
 {
@@ -209,6 +210,7 @@ namespace RealiticFishing
                 int numFishOfType = fishOfType.Count;
                 int selectedFish = ModEntry.rand.Next(0, numFishOfType);
 
+                // TODO: figure out if this is needed fishOfType.RemoveAt(selectedFish);
                 fishOfType.Add(fishOfType[selectedFish].MakeBaby());
 
                 this.population[fishName] = fishOfType;
@@ -216,7 +218,31 @@ namespace RealiticFishing
 
             foreach (Tuple<int, string, int, int, int> fish in this.fp.AllFish) {
                 if (this.fp.IsAverageFishBelowValue(fish.Item2)) {
-                    this.OnFishAtCriticalLevel(fish.Item2);
+                    // TODO: send mail from Demetrius informing player of the critical level of fish
+                }
+            }
+
+            foreach (Tuple<int, string, int, int, int> fish in this.fp.AllFish) {
+                
+                if (this.fp.IsAverageFishAboveValue(fish.Item2)) {
+
+                    RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json");
+
+                    bool questAlreadyStarted = false;
+
+                    foreach (Tuple<int, int> q in instance.quests) {
+
+                        // this quest has already been started
+                        if (q.Item1 == fish.Item1) {
+                            questAlreadyStarted = true;        
+                        }
+                    }
+
+                    if (!questAlreadyStarted) {
+                        RealisticFishingQuest populationTooBigQuest = new RealisticFishingQuest(fish.Item1);
+                        instance.quests.Add(new Tuple<int, int>(populationTooBigQuest.id.Value, 0));
+                        Game1.player.questLog.Add(populationTooBigQuest as Quest);
+                    }
                 }
             }
 
@@ -297,6 +323,14 @@ namespace RealiticFishing
             instance.fp = this.fp;
             instance.population = this.fp.population;
             instance.CurrentFishIDCounter = this.fp.CurrentFishIDCounter;
+
+            instance.quests.Clear();
+
+            foreach (Quest q in Game1.player.questLog) {
+                if (q is RealisticFishingQuest rfq) {
+                    instance.quests.Add(new Tuple<int, int>(q.id.Value, rfq.numberFished));
+                }
+            }
 
             instance.inventory.Clear();
 
@@ -564,14 +598,6 @@ namespace RealiticFishing
          */
         private void OnFishingEnd() {
             
-        }
-
-        /* OnFishAtCriticalLevel
-         * Triggers when a population of fish with name <fishName> has average length 
-         *   1 standard deviation below the mean
-         */
-        private void OnFishAtCriticalLevel(String fishName) {
-            Monitor.Log("The average size of " + fishName + " has fallen to critical levels.");
         }
 
         /* PromptThrowBackFish

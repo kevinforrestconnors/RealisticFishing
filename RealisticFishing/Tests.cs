@@ -40,6 +40,23 @@ namespace RealisticFishing
             FishItem.itemToAdd = customFish as FishItem;
             ((FishItem)customFish).AddToInventory();
             ModEntryInstance.FishCaught = customFish;
+
+            List<FishModel> fishToDelete;
+            ModEntryInstance.population.TryGetValue(fishName, out fishToDelete);
+
+            int minLength = 100;
+            int sf = 0;
+
+            for (int i = 0; i < fishToDelete.Count; i++) {
+                if (fishToDelete[i].length < minLength) {
+                    sf = i;
+                }
+            }
+
+            fishOfType.RemoveAt(sf);
+            fishOfType.Add(fishToDelete[fishToDelete.Count - 1].MakeBaby());
+
+            ModEntryInstance.population[fishName] = fishToDelete;
         }
 
         public static void GameEvents_OnUpdateTick(object sender, EventArgs e) 

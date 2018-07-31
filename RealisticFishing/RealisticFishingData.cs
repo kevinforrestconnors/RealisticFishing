@@ -8,8 +8,8 @@ namespace RealisticFishing
 {
     public class RealisticFishingData
     {
-
-
+        // whichFish, numberFished
+        public List<Tuple<int, int>> quests { get; set; }
 
         public List<Tuple<int, List<FishModel>>> inventory { get; set; }
         public Dictionary<String, Dictionary<Vector2, List<Tuple<int, List<FishModel>>>>> chests;
@@ -22,6 +22,7 @@ namespace RealisticFishing
 
         public RealisticFishingData()
         {
+            this.quests = new List<Tuple<int, int>>();
             this.inventory = new List<Tuple<int, List<FishModel>>>();
             this.chests = new Dictionary<String, Dictionary<Vector2, List<Tuple<int, List<FishModel>>>>>();
             this.NumFishCaughtToday = 0;
