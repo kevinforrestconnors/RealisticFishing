@@ -459,7 +459,6 @@ namespace RealiticFishing
                         // store a new custom fish item
                         Item customFish = (Item)new FishItem(this.whichFish, selectedFish);
                         FishItem.itemToAdd = customFish as FishItem;
-                        ((FishItem)customFish).AddToInventory();
                         this.FishCaught = customFish;
 
                         // make sure the fish in the ocean will be regenerated at the end of the day
@@ -658,28 +657,20 @@ namespace RealiticFishing
 
             if (whichAnswer == "Yes") {
 
-                Item fish = this.FishCaught.getOne();
+                Item fish = new FishItem(this.FishCaught.ParentSheetIndex);
 
                 if (this.AllFishCaughtToday.Count > 0) {
                     this.AllFishCaughtToday.RemoveAt(this.AllFishCaughtToday.Count - 1);
                 }
 
-                this.FishCaught.Stack--;
-
-                if ((this.FishCaught as FishItem).FishStack.Count > 0) {
-                    (this.FishCaught as FishItem).FishStack.RemoveAt((this.FishCaught as FishItem).FishStack.Count - 1);
-                }
-
-                if (this.FishCaught.Stack <= 0)
-                {
-                    Game1.player.removeItemFromInventory(this.FishCaught);
-                }
                 this.ThrowFish(fish, who.getStandingPosition(), this.FishingDirection, (GameLocation)null, -1);
                 return true;
 
             } else if (whichAnswer == "No") {
 
                 this.NumFishCaughtToday++;
+
+                (this.FishCaught as FishItem).AddToInventory();
 
                 if (this.NumFishCaughtToday == this.FishQuota) {
                     Game1.addHUDMessage(new HUDMessage("You have reached the fishing limit for today."));

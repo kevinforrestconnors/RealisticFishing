@@ -8,7 +8,7 @@ namespace RealisticFishing
     public class RealisticFishingQuest : Quest
     {
         public string target = "Demetrius";
-        public int numberToFish = 10;
+        public int numberToFish = 3;
         public int numberFished = 0;
         public int reward = 15000;
         public int whichFish;
