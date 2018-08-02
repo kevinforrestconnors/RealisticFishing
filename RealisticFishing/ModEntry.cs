@@ -272,12 +272,6 @@ namespace RealiticFishing
                 this.RecoverItemsInChests(instance);
             }
 
-            // Recover quests
-            if (!this.questsWereReconstructed) 
-            {
-                this.RecoverQuests(instance);
-            }
-
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
 
             this.Monitor.Log("SaveEvents_AfterLoad: " + instance.fp.PrintChangedFish(new List<String>()));
@@ -306,40 +300,6 @@ namespace RealiticFishing
                 if (this.fp.IsAverageFishBelowValue(fish.Item2))
                 {
                     // TODO: send mail from Demetrius informing player of the critical level of fish
-                }
-            }
-
-            instance.quests.Clear();
-
-            foreach (Quest q in Game1.player.questLog)
-            {
-                if (q is RealisticFishingQuest rfq)
-                {
-                    instance.quests.Add(new Tuple<int, int, int>(rfq.id.Value, rfq.whichFish, rfq.numberFished));
-                }
-            }
-
-            // Remove unserializable RealisticFishingQuests from the quest log
-            Game1.player.questLog.Filter((Quest q) => !(q is RealisticFishingQuest));
-
-            foreach (Tuple<int, string, int, int, int> fish in this.fp.AllFish)
-            {
-
-                if (this.fp.IsAverageFishAboveValue(fish.Item2))
-                {
-                    bool alreadyAcceptedQuest = false;
-
-                    foreach (Tuple<int, int, int> instanceQuest in instance.quests) {
-
-                        if (fish.Item1 == instanceQuest.Item2) {
-                            alreadyAcceptedQuest = true;
-                        }
-                    }
-
-                    if (!alreadyAcceptedQuest) {
-                        RealisticFishingQuest newQuest = new RealisticFishingQuest(fish.Item1);
-                        instance.quests.Add(new Tuple<int, int, int>(newQuest.id.Value, fish.Item1, 0));
-                    }
                 }
             }
 
@@ -410,12 +370,6 @@ namespace RealiticFishing
             if (!this.chestsWereReconstructed)
             {
                 this.RecoverItemsInChests(instance);
-            }
-
-            // Recover quests
-            if (!this.questsWereReconstructed)
-            {
-                this.RecoverQuests(instance);
             }
 
         }
@@ -772,15 +726,6 @@ namespace RealiticFishing
                 itemToBeAdded.recoveredFromInventory = true;
 
                 itemToBeAdded.AddToInventory();
-            }
-        }
-
-        private void RecoverQuests(RealisticFishingData instance) {
-
-            this.questsWereReconstructed = true;
-
-            foreach (Tuple<int, int, int> instanceQuest in instance.quests) {
-                Game1.player.questLog.Add(new RealisticFishingQuest(instanceQuest.Item2, instanceQuest.Item3) as Quest);
             }
         }
     }
