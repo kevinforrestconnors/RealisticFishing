@@ -24,7 +24,9 @@ namespace RealisticFishing
 
         public static void GiveFish() {
 
-            string fishName = ModEntryInstance.fp.AllFish[0].Item2;
+            int fishId = 1; // anchovy
+
+            string fishName = ModEntryInstance.fp.AllFish[fishId].Item2;
 
             // get the list of fish in the Population with that name
             List<FishModel> fishOfType;
@@ -36,10 +38,33 @@ namespace RealisticFishing
             FishModel selectedFish = fishOfType[selectedFishIndex];
 
             // store a new custom fish item
-            Item customFish = (Item)new FishItem(ModEntryInstance.fp.AllFish[0].Item1, selectedFish);
+            Item customFish = (Item)new FishItem(ModEntryInstance.fp.AllFish[fishId].Item1, selectedFish);
             FishItem.itemToAdd = customFish as FishItem;
             ((FishItem)customFish).AddToInventory();
             ModEntryInstance.FishCaught = customFish;
+
+            List<FishModel> fishToDelete;
+            ModEntryInstance.population.TryGetValue(fishName, out fishToDelete);
+
+            int maxLength = 0;
+            int sf = 0;
+
+            for (int i = 0; i < fishToDelete.Count; i++) {
+                if (fishToDelete[i].length > maxLength) {
+                    sf = i;
+                    maxLength = (int)fishToDelete[i].length;
+                }
+            }
+
+            fishOfType.RemoveAt(sf);
+            fishOfType.Add(fishToDelete[fishToDelete.Count - 1].MakeBaby());
+
+            ModEntryInstance.population[fishName] = fishToDelete;
+
+            if (ModEntryInstance.fp.IsAverageFishBelowValue(fishName))
+            {
+                ModEntryInstance.Monitor.Log("pop too small");
+            }
         }
 
         public static void GameEvents_OnUpdateTick(object sender, EventArgs e) 

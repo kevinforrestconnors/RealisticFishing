@@ -9,13 +9,13 @@ using StardewValley.Tools;
 using RealisticFishing;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
-using StardewValley.Minigames;
 using StardewValley.Objects;
+
 
 namespace RealiticFishing
 {
     /// <summary>The main entry point.</summary>
-    public class ModEntry : Mod
+    public class ModEntry : Mod, IAssetEditor
     {
         /*********
         ** Properties
@@ -57,6 +57,7 @@ namespace RealiticFishing
 
         public bool inventoryWasReconstructed = false;
         public bool chestsWereReconstructed = false;
+        public bool questsWereReconstructed = false;
 
         /*********
         ** Public methods
@@ -89,6 +90,31 @@ namespace RealiticFishing
         /*********
         ** Private methods
         *********/
+
+        public bool CanEdit<T>(IAssetInfo asset)
+        {
+            if (asset.AssetNameEquals("Data/mail"))
+                return true;
+
+            return false;
+        }
+
+        public void Edit<T>(IAssetData asset)
+        {
+            if (asset.AssetNameEquals("Data/mail"))
+            {
+
+                IDictionary<string, string> data = asset.AsDictionary<string, string>().Data;
+
+                foreach (Tuple<int, string, int, int, int> f in fp.AllFish) {
+                    data["demetrius" + f.Item2.Trim()] = "Dear @,^ I was conducting a field study on " + f.Item2.Trim() + " the other day, and I discovered that" +
+                                                                                                          " the population is in decline. ^ To prevent a fishery collapse, please release any large " + f.Item2.Trim() + 
+                                                  " you catch until the population is stable again. ^ -Demetrius";
+
+                    data["demetrius2" + f.Item2.Trim()] = "Dear @,^ It looks like the population of " + f.Item2.Trim() + "is stable again. ^ -Demetrius";
+                }
+            }
+        }
 
         /* GameEvents_OnUpdateTick
         * Triggers every time the menu changes.
@@ -209,15 +235,10 @@ namespace RealiticFishing
                 int numFishOfType = fishOfType.Count;
                 int selectedFish = ModEntry.rand.Next(0, numFishOfType);
 
+                fishOfType.RemoveAt(selectedFish);
                 fishOfType.Add(fishOfType[selectedFish].MakeBaby());
 
                 this.population[fishName] = fishOfType;
-            }
-
-            foreach (Tuple<int, string, int, int, int> fish in this.fp.AllFish) {
-                if (this.fp.IsAverageFishBelowValue(fish.Item2)) {
-                    this.OnFishAtCriticalLevel(fish.Item2);
-                }
             }
 
             this.NumFishCaughtToday = 0;
@@ -298,6 +319,30 @@ namespace RealiticFishing
             instance.population = this.fp.population;
             instance.CurrentFishIDCounter = this.fp.CurrentFishIDCounter;
 
+            foreach (Tuple<int, string, int, int, int> fish in this.fp.AllFish)
+            {
+                if (this.fp.IsAverageFishBelowValue(fish.Item2))
+                {
+                    // Fish is endangered.  the value in the dictionary represents that the mail message from Demetrius has not yet been sent
+                    if (!instance.endangeredFish.ContainsKey(fish.Item2)) {
+                        instance.endangeredFish.Add(fish.Item2, false);
+                        Game1.addMailForTomorrow("demetrius" + fish.Item2);
+                        instance.endangeredFish[fish.Item2] = true;
+                        this.Monitor.Log("mail sent");
+                    } 
+                } else {
+                    // Fish is no longer endangered
+                    if (instance.endangeredFish.ContainsKey(fish.Item2)) {
+
+                        if (instance.endangeredFish[fish.Item2] == true) {
+                            Game1.addMailForTomorrow("demetrius2" + fish.Item2);
+                        }
+
+                        instance.endangeredFish.Remove(fish.Item2);
+                    }
+                }
+            }
+
             instance.inventory.Clear();
 
             // Save items in inventory
@@ -345,6 +390,7 @@ namespace RealiticFishing
 
             this.inventoryWasReconstructed = false;
             this.chestsWereReconstructed = false;
+            this.questsWereReconstructed = false;
 
             this.Monitor.Log("BeforeSave: " + instance.fp.PrintChangedFish(new List<String>()));
         }
@@ -407,7 +453,6 @@ namespace RealiticFishing
                         // store a new custom fish item
                         Item customFish = (Item)new FishItem(this.whichFish, selectedFish);
                         FishItem.itemToAdd = customFish as FishItem;
-                        ((FishItem)customFish).AddToInventory();
                         this.FishCaught = customFish;
 
                         // make sure the fish in the ocean will be regenerated at the end of the day
@@ -566,14 +611,6 @@ namespace RealiticFishing
             
         }
 
-        /* OnFishAtCriticalLevel
-         * Triggers when a population of fish with name <fishName> has average length 
-         *   1 standard deviation below the mean
-         */
-        private void OnFishAtCriticalLevel(String fishName) {
-            Monitor.Log("The average size of " + fishName + " has fallen to critical levels.");
-        }
-
         /* PromptThrowBackFish
          * Triggers every time the player catches a fish while they are still under the quota.
          * Calls ThrowBackFish as a callback to handle the choice made.
@@ -614,28 +651,20 @@ namespace RealiticFishing
 
             if (whichAnswer == "Yes") {
 
-                Item fish = this.FishCaught.getOne();
+                Item fish = new FishItem(this.FishCaught.ParentSheetIndex);
 
                 if (this.AllFishCaughtToday.Count > 0) {
                     this.AllFishCaughtToday.RemoveAt(this.AllFishCaughtToday.Count - 1);
                 }
 
-                this.FishCaught.Stack--;
-
-                if ((this.FishCaught as FishItem).FishStack.Count > 0) {
-                    (this.FishCaught as FishItem).FishStack.RemoveAt((this.FishCaught as FishItem).FishStack.Count - 1);
-                }
-
-                if (this.FishCaught.Stack <= 0)
-                {
-                    Game1.player.removeItemFromInventory(this.FishCaught);
-                }
                 this.ThrowFish(fish, who.getStandingPosition(), this.FishingDirection, (GameLocation)null, -1);
                 return true;
 
             } else if (whichAnswer == "No") {
 
                 this.NumFishCaughtToday++;
+
+                (this.FishCaught as FishItem).AddToInventory();
 
                 if (this.NumFishCaughtToday == this.FishQuota) {
                     Game1.addHUDMessage(new HUDMessage("You have reached the fishing limit for today."));
