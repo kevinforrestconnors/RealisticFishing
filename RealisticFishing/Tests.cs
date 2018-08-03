@@ -46,13 +46,13 @@ namespace RealisticFishing
             List<FishModel> fishToDelete;
             ModEntryInstance.population.TryGetValue(fishName, out fishToDelete);
 
-            int minLength = 100;
+            int maxLength = 0;
             int sf = 0;
 
             for (int i = 0; i < fishToDelete.Count; i++) {
-                if (fishToDelete[i].length < minLength) {
+                if (fishToDelete[i].length > maxLength) {
                     sf = i;
-                    minLength = (int)fishToDelete[i].length;
+                    maxLength = (int)fishToDelete[i].length;
                 }
             }
 
@@ -61,9 +61,9 @@ namespace RealisticFishing
 
             ModEntryInstance.population[fishName] = fishToDelete;
 
-            if (ModEntryInstance.fp.IsAverageFishAboveValue(fishName))
+            if (ModEntryInstance.fp.IsAverageFishBelowValue(fishName))
             {
-                ModEntryInstance.Monitor.Log("pop too big");
+                ModEntryInstance.Monitor.Log("pop too small");
             }
         }
 

@@ -9,14 +9,13 @@ using StardewValley.Tools;
 using RealisticFishing;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
-using StardewValley.Minigames;
 using StardewValley.Objects;
-using StardewValley.Quests;
+
 
 namespace RealiticFishing
 {
     /// <summary>The main entry point.</summary>
-    public class ModEntry : Mod
+    public class ModEntry : Mod, IAssetEditor
     {
         /*********
         ** Properties
@@ -91,6 +90,31 @@ namespace RealiticFishing
         /*********
         ** Private methods
         *********/
+
+        public bool CanEdit<T>(IAssetInfo asset)
+        {
+            if (asset.AssetNameEquals("Data/mail"))
+                return true;
+
+            return false;
+        }
+
+        public void Edit<T>(IAssetData asset)
+        {
+            if (asset.AssetNameEquals("Data/mail"))
+            {
+
+                IDictionary<string, string> data = asset.AsDictionary<string, string>().Data;
+
+                foreach (Tuple<int, string, int, int, int> f in fp.AllFish) {
+                    data["demetrius" + f.Item2.Trim()] = "Dear @,^ I was conducting a field study on " + f.Item2.Trim() + " the other day, and I discovered that" +
+                                                                                                          " the population is in decline. ^ To prevent a fishery collapse, please release any large " + f.Item2.Trim() + 
+                                                  " you catch until the population is stable again. ^ -Demetrius";
+
+                    data["demetrius2" + f.Item2.Trim()] = "Dear @,^ It looks like the population of " + f.Item2.Trim() + "is stable again. ^ -Demetrius";
+                }
+            }
+        }
 
         /* GameEvents_OnUpdateTick
         * Triggers every time the menu changes.
@@ -299,7 +323,23 @@ namespace RealiticFishing
             {
                 if (this.fp.IsAverageFishBelowValue(fish.Item2))
                 {
-                    // TODO: send mail from Demetrius informing player of the critical level of fish
+                    // Fish is endangered.  the value in the dictionary represents that the mail message from Demetrius has not yet been sent
+                    if (!instance.endangeredFish.ContainsKey(fish.Item2)) {
+                        instance.endangeredFish.Add(fish.Item2, false);
+                        Game1.addMailForTomorrow("demetrius" + fish.Item2);
+                        instance.endangeredFish[fish.Item2] = true;
+                        this.Monitor.Log("mail sent");
+                    } 
+                } else {
+                    // Fish is no longer endangered
+                    if (instance.endangeredFish.ContainsKey(fish.Item2)) {
+
+                        if (instance.endangeredFish[fish.Item2] == true) {
+                            Game1.addMailForTomorrow("demetrius2" + fish.Item2);
+                        }
+
+                        instance.endangeredFish.Remove(fish.Item2);
+                    }
                 }
             }
 

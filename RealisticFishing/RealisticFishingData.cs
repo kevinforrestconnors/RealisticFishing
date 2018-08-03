@@ -8,6 +8,8 @@ namespace RealisticFishing
 {
     public class RealisticFishingData
     {
+        public Dictionary<string, bool> endangeredFish { get; set; }
+
         public List<Tuple<int, List<FishModel>>> inventory { get; set; }
         public Dictionary<String, Dictionary<Vector2, List<Tuple<int, List<FishModel>>>>> chests;
 
@@ -19,6 +21,7 @@ namespace RealisticFishing
 
         public RealisticFishingData()
         {
+            this.endangeredFish = new Dictionary<string, bool>();
             this.inventory = new List<Tuple<int, List<FishModel>>>();
             this.chests = new Dictionary<String, Dictionary<Vector2, List<Tuple<int, List<FishModel>>>>>();
             this.NumFishCaughtToday = 0;

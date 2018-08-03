@@ -12,6 +12,8 @@ namespace RealisticFishing
 
     public class FishItem : StardewValley.Object
     {
+        public const int saleModifier = 8;
+
         public int Id;
         public List<FishModel> FishStack = new List<FishModel>();
 
@@ -150,7 +152,7 @@ namespace RealisticFishing
 
             foreach (FishModel fish in this.FishStack)
             {
-                p += base.Price * (Math.Round(fish.length) / 10) * (fish.quality + 1);
+                p += base.Price * (Math.Round(fish.length) / FishItem.saleModifier) * (fish.quality + 1);
             }
 
             p /= this.FishStack.Count;
@@ -164,7 +166,7 @@ namespace RealisticFishing
 
             foreach (FishModel fish in this.FishStack)
             {
-                p += base.Price * (Math.Round(fish.length) / 10) * (fish.quality + 1);
+                p += base.Price * (Math.Round(fish.length) / FishItem.saleModifier) * (fish.quality + 1);
             }
 
             p /= this.FishStack.Count;
