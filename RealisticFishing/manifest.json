@@ -1,8 +1,8 @@
 ﻿{
   "Name": "Realistic Fishing",
   "Author": "Kevin Connors",
-  "Version": "0.0.1",
-  "Description": "Allows the player to throw fish back into the water",
+  "Version": "1.0.0",
+  "Description": "Overhauls fishing to provide a more realistic experience",
   "UniqueID": "KevinConnors.RealisticFishing",
   "EntryDll": "RealisticFishing.dll",
   "MinimumApiVersion": "2.0",
