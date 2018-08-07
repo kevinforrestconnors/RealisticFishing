@@ -16,6 +16,7 @@ namespace RealisticFishing
 
         public int Id;
         public List<FishModel> FishStack = new List<FishModel>();
+        public String Description;
 
         public Boolean recoveredFromInventory = false;
 
@@ -35,21 +36,21 @@ namespace RealisticFishing
         // Used for all other cases where the inventory interacts with a chest
         public static FishItem itemInChestToUpdate;
 
-        public String Description;
+        public FishItem()
+            : base(0, 1, false, -1, 0) {
+            this.initNetFields();
+        }
 
-        public FishItem(int id) 
-            : base(id, 1, false, -1, 1) 
+        public FishItem(int id) : this(id, null) 
         {
-
-            this.Name += " ";
-            this.Id = id;
-            this.Description = base.getDescription();
-            this.FishStack.Add(new FishModel(-1, this.Name, -1, -1, 0, 1));
         }
 
         public FishItem(int id, FishModel fish) 
             : base(id, 1, false, -1, fish.quality)
         {
+            if (fish == null) {
+                fish = new FishModel(-1, this.Name, -1, -1, 0, 1);
+            }
 
             this.Name += " ";
             this.Id = id;

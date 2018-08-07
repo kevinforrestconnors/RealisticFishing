@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
 using StardewValley.Objects;
 
-
 namespace RealiticFishing
 {
     /// <summary>The main entry point.</summary>
