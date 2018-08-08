@@ -6,5 +6,10 @@
   "UniqueID": "KevinConnors.RealisticFishing",
   "EntryDll": "RealisticFishing.dll",
   "MinimumApiVersion": "2.0",
-  "UpdateKeys": ["GitHub:kevinforrestconnors/RealisticFishing"]
+  "UpdateKeys": ["GitHub:kevinforrestconnors/RealisticFishing"],
+  "Dependencies": [
+    {
+      "UniqueID": "Platonymous.Toolkit"
+    }
+  ]
 }

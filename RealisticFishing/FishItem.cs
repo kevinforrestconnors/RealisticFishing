@@ -6,11 +6,13 @@ using RealiticFishing;
 using StardewValley;
 using StardewValley.Objects;
 
+using PyTK.CustomElementHandler;
+using Newtonsoft.Json;
 
 namespace RealisticFishing
 {
 
-    public class FishItem : StardewValley.Object
+    public class FishItem : StardewValley.Object, ISaveElement
     {
         public const int saleModifier = 8;
 
@@ -36,27 +38,72 @@ namespace RealisticFishing
         // Used for all other cases where the inventory interacts with a chest
         public static FishItem itemInChestToUpdate;
 
-        public FishItem()
-            : base(0, 1, false, -1, 0) {
-            this.initNetFields();
+        public FishItem() {
+            this.build();
         }
 
-        public FishItem(int id) : this(id, null) 
+        public FishItem(int id) 
+            : base(id, 1, false, -1, 1) 
         {
+
+            this.Name += " ";
+            this.Id = id;
+            this.Description = base.getDescription();
+            this.FishStack.Add(new FishModel(-1, this.Name, -1, -1, 0, 1));
         }
 
         public FishItem(int id, FishModel fish) 
             : base(id, 1, false, -1, fish.quality)
         {
-            if (fish == null) {
-                fish = new FishModel(-1, this.Name, -1, -1, 0, 1);
-            }
 
             this.Name += " ";
             this.Id = id;
             this.Description = base.getDescription();
 
             this.FishStack.Add(fish);
+        }
+
+        public object getReplacement()
+        {
+            Chest replacement = new Chest(true);
+            return replacement;
+        }
+
+        public Dictionary<string, string> getAdditionalSaveData()
+        {
+            Dictionary<string, string> savedata = new Dictionary<string, string>();
+            savedata.Add("Id", this.Id.ToString());
+            savedata.Add("FishStack", JsonConvert.SerializeObject(this.FishStack));
+            return savedata;
+        }
+
+        public void rebuild(Dictionary<string, string> additionalSaveData, object replacement)
+        {
+            Chest chest = (Chest)replacement;
+
+            this.Id = (int)JsonConvert.DeserializeObject(additionalSaveData["Id"]);
+            this.ParentSheetIndex = this.Id;
+
+            this.FishStack = (List<FishModel>)JsonConvert.DeserializeObject(additionalSaveData["FishStack"]);
+
+            this.Description = base.getDescription();
+
+            string str;
+            Game1.objectInformation.TryGetValue(this.Id, out str);
+            if (str != null)
+            {
+                string[] strArray = str.Split('/');
+                this.name = strArray[0];
+                this.price.Value = Convert.ToInt32(strArray[1]);
+                this.edibility.Value = Convert.ToInt32(strArray[2]);
+                this.Description = strArray[5];
+            }
+        }
+
+        public void build() {
+
+            this.name = "Temp Fish";
+            this.Description = "A temporary fish used to sync game data.";
         }
 
         public override int maximumStackSize()
