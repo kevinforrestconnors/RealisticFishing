@@ -504,6 +504,8 @@ namespace RealiticFishing
                         Game1.player.removeItemFromInventory(i.Item);
                     } else {
 
+                        fishItem.syncObject.MarkDirty();
+
                         if (fishItem.recoveredFromInventory)
                         {
                             fishItem.recoveredFromInventory = false;
@@ -529,6 +531,8 @@ namespace RealiticFishing
 
                     if (i.Item is FishItem fishItem) {
 
+                        fishItem.syncObject.MarkDirty();
+
                         FishItem.itemToAdd = new FishItem(fishItem.Id);
                         FishItem.itemToAdd.FishStack = fishItem.FishStack;
                     }
@@ -547,6 +551,7 @@ namespace RealiticFishing
                     }
                     else
                     {
+                        fishItem.syncObject.MarkDirty();
 
                         if (i.StackChange < 0)
                         {

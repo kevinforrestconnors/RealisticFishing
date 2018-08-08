@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using RealiticFishing;
 using StardewValley;
 using StardewValley.Objects;
 
@@ -12,7 +11,7 @@ using Newtonsoft.Json;
 namespace RealisticFishing
 {
 
-    public class FishItem : StardewValley.Object, ISaveElement
+    public class FishItem : StardewValley.Object, ICustomObject, ISyncableElement
     {
         public const int saleModifier = 8;
 
@@ -38,13 +37,27 @@ namespace RealisticFishing
         // Used for all other cases where the inventory interacts with a chest
         public static FishItem itemInChestToUpdate;
 
-        public FishItem() {
+        public PySync syncObject { get; set; }
+
+        public FishItem() 
+        {
+            if (syncObject == null)
+            {
+                syncObject = new PySync(this);
+                syncObject.init();
+            }
+
             this.build();
         }
 
         public FishItem(int id) 
             : base(id, 1, false, -1, 1) 
         {
+            if (syncObject == null)
+            {
+                syncObject = new PySync(this);
+                syncObject.init();
+            }
 
             this.Name += " ";
             this.Id = id;
@@ -55,6 +68,11 @@ namespace RealisticFishing
         public FishItem(int id, FishModel fish) 
             : base(id, 1, false, -1, fish.quality)
         {
+            if (syncObject == null)
+            {
+                syncObject = new PySync(this);
+                syncObject.init();
+            }
 
             this.Name += " ";
             this.Id = id;
@@ -79,19 +97,22 @@ namespace RealisticFishing
 
         public void rebuild(Dictionary<string, string> additionalSaveData, object replacement)
         {
-            Chest chest = (Chest)replacement;
-
             this.Id = int.Parse(additionalSaveData["Id"]);
+            Tests.ModEntryInstance.Monitor.Log("rebuilding... id: " + this.Id.ToString());
             this.ParentSheetIndex = this.Id;
 
-            this.FishStack = (List<FishModel>)JsonConvert.DeserializeObject(additionalSaveData["FishStack"]);
+            Tests.ModEntryInstance.Monitor.Log("rebuilding step 1 in progress.");
 
-            this.Description = base.getDescription();
+            this.FishStack = JsonConvert.DeserializeObject<List<FishModel>>(additionalSaveData["FishStack"]);
+
+            Tests.ModEntryInstance.Monitor.Log("rebuilding step 1 completed.");
 
             string str;
             Game1.objectInformation.TryGetValue(this.Id, out str);
             if (str != null)
             {
+                Tests.ModEntryInstance.Monitor.Log("rebuilding step 2 completed.");
+
                 string[] strArray = str.Split('/');
                 this.name = strArray[0];
                 this.price.Value = Convert.ToInt32(strArray[1]);
@@ -100,10 +121,39 @@ namespace RealisticFishing
             }
         }
 
-        public void build() {
+        public ICustomObject recreate(Dictionary<string, string> additionalSaveData, object replacement)
+        {
 
-            this.name = "Temp Fish";
-            this.Description = "A temporary fish used to sync game data.";
+            int id = int.Parse(additionalSaveData["Id"]);
+
+            Tests.ModEntryInstance.Monitor.Log("recreating step 1 in progress.");
+
+            List<FishModel> fishStack = JsonConvert.DeserializeObject<List<FishModel>>(additionalSaveData["FishStack"]);
+
+            Tests.ModEntryInstance.Monitor.Log("recreating step 1 completed.");
+
+            FishItem fish = new FishItem(id);
+            fish.FishStack = fishStack;
+            return (ICustomObject)fish;
+        }
+
+        public void build() {
+            this.Name = "test update";
+            this.Description = "test desc";
+        }
+
+        public Dictionary<string, string> getSyncData()
+        {
+            Dictionary<string, string> savedata = new Dictionary<string, string>();
+            savedata.Add("Description", this.Description);
+            savedata.Add("FishStack", JsonConvert.SerializeObject(this.FishStack));
+            return savedata;
+        }
+
+        public void sync(Dictionary<string, string> syncData)
+        {
+            this.FishStack = JsonConvert.DeserializeObject<List<FishModel>>(syncData["FishStack"]);
+            this.Description = syncData["Description"];
         }
 
         public override int maximumStackSize()
@@ -113,6 +163,7 @@ namespace RealisticFishing
 
         public void AddToInventory()
         {
+            this.syncObject.MarkDirty();
 
             Item item = this;
             FishItem fishItem = item as FishItem;
@@ -124,6 +175,7 @@ namespace RealisticFishing
                 {
                     (Game1.player.items[index] as FishItem).Stack += fishItem.Stack;
                     (Game1.player.items[index] as FishItem).FishStack.AddRange(fishItem.FishStack);
+                    (Game1.player.items[index] as FishItem).syncObject.MarkDirty();
                     return;
                 }
             }
@@ -146,6 +198,7 @@ namespace RealisticFishing
         public override Item getOne() {
 
             this.checkIfStackIsWrong();
+            this.syncObject.MarkDirty();
 
             if (this.FishStack.Count > 0) {
                 
@@ -225,6 +278,8 @@ namespace RealisticFishing
         }
 
         public override int addToStack(int amount) {
+
+            this.syncObject.MarkDirty();
 
             FishItem.itemToChange = this;
 
