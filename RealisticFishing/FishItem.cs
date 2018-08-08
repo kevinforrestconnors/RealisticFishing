@@ -92,6 +92,7 @@ namespace RealisticFishing
             Dictionary<string, string> savedata = new Dictionary<string, string>();
             savedata.Add("Id", this.Id.ToString());
             savedata.Add("FishStack", JsonConvert.SerializeObject(this.FishStack));
+            savedata.Add("quality", this.quality.ToString());
             return savedata;
         }
 
@@ -101,9 +102,13 @@ namespace RealisticFishing
             Tests.ModEntryInstance.Monitor.Log("rebuilding... id: " + this.Id.ToString());
             this.ParentSheetIndex = this.Id;
 
+            this.quality.Value = int.Parse(additionalSaveData["quality"]);
+
             Tests.ModEntryInstance.Monitor.Log("rebuilding step 1 in progress.");
 
+            Tests.ModEntryInstance.Monitor.Log("rebuild: " + additionalSaveData["FishStack"]);
             this.FishStack = JsonConvert.DeserializeObject<List<FishModel>>(additionalSaveData["FishStack"]);
+            this.Stack = this.FishStack.Count;
 
             Tests.ModEntryInstance.Monitor.Log("rebuilding step 1 completed.");
 
@@ -241,9 +246,9 @@ namespace RealisticFishing
             }
 
             if (count >= max) {
-                return this.Description + "This stack contains " + this.Name + "of length: \n" + lengths + "\n...(truncated)";
+                return this.Description + "This stack contains " + this.Name + " of length: \n" + lengths + "\n...(truncated)";
             } else {
-                return this.Description + "This stack contains " + this.Name + "of length: \n" + lengths;   
+                return this.Description + "This stack contains " + this.Name + " of length: \n" + lengths;   
             }
         }
 
