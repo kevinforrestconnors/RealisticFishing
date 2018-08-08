@@ -28,6 +28,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="PyTK">
+      <HintPath>..\..\..\Library\Application Support\Steam\steamapps\common\Stardew Valley\Contents\MacOS\Mods\PyTK\PyTK.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ModEntry.cs" />

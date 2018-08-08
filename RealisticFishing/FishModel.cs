@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Newtonsoft.Json;
 using StardewValley;
 
 namespace RealisticFishing
@@ -16,6 +17,7 @@ namespace RealisticFishing
 
         public int quality;
 
+        [JsonConstructor]
         public FishModel(int id, string name, int minLength, int maxLength, double length, int quality)
         {
             this.uniqueID = id;
