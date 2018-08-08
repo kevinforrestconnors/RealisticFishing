@@ -81,7 +81,7 @@ namespace RealisticFishing
         {
             Chest chest = (Chest)replacement;
 
-            this.Id = (int)JsonConvert.DeserializeObject(additionalSaveData["Id"]);
+            this.Id = int.Parse(additionalSaveData["Id"]);
             this.ParentSheetIndex = this.Id;
 
             this.FishStack = (List<FishModel>)JsonConvert.DeserializeObject(additionalSaveData["FishStack"]);
