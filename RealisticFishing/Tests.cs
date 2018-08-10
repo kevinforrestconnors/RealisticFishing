@@ -15,7 +15,7 @@ namespace RealisticFishing
     public static class Tests
     {
         
-        public static bool ShouldRunTests = true;
+        public static bool ShouldRunTests = false;
         public static bool RunningTests = true;
 
         private static Random rand = new Random();

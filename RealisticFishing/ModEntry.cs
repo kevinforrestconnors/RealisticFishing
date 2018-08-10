@@ -420,10 +420,8 @@ namespace RealiticFishing
         private void GameEvents_OnUpdateTick(object sender, EventArgs e)
         {
 
-            if (Game1.player.CurrentTool is FishingRod)
+            if (Game1.player.CurrentTool is FishingRod rod)
             {
-
-                var rod = Game1.player.CurrentTool as FishingRod;
 
                 if (rod.fishCaught && !this.PlayerReceivedFish)
                 {
