@@ -1,22 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
+using PyTK.CustomElementHandler;
 using RealiticFishing;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.Menus;
+using StardewValley.Objects;
 using StardewValley.Tools;
 
 namespace RealisticFishing
 {
 
-    public class FishPopulation
+    public class FishPopulation : ISyncableElement
     {
 
         public int CurrentFishIDCounter;
         public Dictionary<string, List<FishModel>> population;
         public List<Tuple<int, string, int, int, int>> AllFish;
+
+        public PySync syncObject { get; set; }
 
         public FishPopulation()
         {
@@ -147,6 +152,52 @@ namespace RealisticFishing
             }
 
             return ret;
+        }
+
+        public Dictionary<string, string> getSyncData()
+        {
+            Dictionary<string, string> savedata = new Dictionary<string, string>();
+            savedata.Add("CurrentFishIDCounter", this.CurrentFishIDCounter.ToString());
+            savedata.Add("population", JsonConvert.SerializeObject(this.population));
+            return savedata;
+        }
+
+        public void sync(Dictionary<string, string> syncData)
+        {
+            this.CurrentFishIDCounter = int.Parse(syncData["CurrentFishIDCounter"]);
+            this.population = JsonConvert.DeserializeObject<Dictionary<string, List<FishModel>>>(syncData["population"]);
+        }
+
+        public object getReplacement()
+        {
+            Chest replacement = new Chest(true);
+            return replacement;
+        }
+
+        public Dictionary<string, string> getAdditionalSaveData()
+        {
+            Dictionary<string, string> savedata = new Dictionary<string, string>();
+            savedata.Add("CurrentFishIDCounter", this.CurrentFishIDCounter.ToString());
+            savedata.Add("population", JsonConvert.SerializeObject(this.population));
+            return savedata;
+        }
+
+        public void rebuild(Dictionary<string, string> additionalSaveData, object replacement)
+        {
+            this.CurrentFishIDCounter = int.Parse(additionalSaveData["CurrentFishIDCounter"]);
+            this.population = JsonConvert.DeserializeObject<Dictionary<string, List<FishModel>>>(additionalSaveData["population"]);
+
+            this.AllFish = new List<Tuple<int, string, int, int, int>>();
+
+            foreach (KeyValuePair<int, string> item in Game1.content.Load<Dictionary<int, string>>("Data\\Fish"))
+            {
+                string[] fishFields = item.Value.Split('/');
+
+                if (fishFields[1] != "trap" && fishFields[0] != "Green Algae" && fishFields[0] != "White Algae" && fishFields[0] != "Seaweed")
+                {
+                    this.AllFish.Add(new Tuple<int, string, int, int, int>(item.Key, fishFields[0] + " ", int.Parse(fishFields[3]), int.Parse(fishFields[4]), 1));
+                }
+            }
         }
     }
 }
