@@ -99,25 +99,15 @@ namespace RealisticFishing
         public void rebuild(Dictionary<string, string> additionalSaveData, object replacement)
         {
             this.Id = int.Parse(additionalSaveData["Id"]);
-            Tests.ModEntryInstance.Monitor.Log("rebuilding... id: " + this.Id.ToString());
             this.ParentSheetIndex = this.Id;
-
             this.quality.Value = int.Parse(additionalSaveData["quality"]);
-
-            Tests.ModEntryInstance.Monitor.Log("rebuilding step 1 in progress.");
-
-            Tests.ModEntryInstance.Monitor.Log("rebuild: " + additionalSaveData["FishStack"]);
             this.FishStack = JsonConvert.DeserializeObject<List<FishModel>>(additionalSaveData["FishStack"]);
             this.Stack = this.FishStack.Count;
-
-            Tests.ModEntryInstance.Monitor.Log("rebuilding step 1 completed.");
 
             string str;
             Game1.objectInformation.TryGetValue(this.Id, out str);
             if (str != null)
             {
-                Tests.ModEntryInstance.Monitor.Log("rebuilding step 2 completed.");
-
                 string[] strArray = str.Split('/');
                 this.name = strArray[0];
                 this.price.Value = Convert.ToInt32(strArray[1]);
@@ -131,11 +121,7 @@ namespace RealisticFishing
 
             int id = int.Parse(additionalSaveData["Id"]);
 
-            Tests.ModEntryInstance.Monitor.Log("recreating step 1 in progress.");
-
             List<FishModel> fishStack = JsonConvert.DeserializeObject<List<FishModel>>(additionalSaveData["FishStack"]);
-
-            Tests.ModEntryInstance.Monitor.Log("recreating step 1 completed.");
 
             FishItem fish = new FishItem(id);
             fish.FishStack = fishStack;
@@ -213,7 +199,6 @@ namespace RealisticFishing
 
                 return (Item)one;
             } else {
-                Tests.ModEntryInstance.Monitor.Log("Something went wrong!");
                 throw new MissingMemberException();
             }
         }

@@ -121,8 +121,6 @@ namespace RealiticFishing
         */
         private void MenuEvents_MenuChanged(object sender, EventArgsClickableMenuChanged e)
         {
-            this.Monitor.Log("New Menu is: " + e.NewMenu.ToString());
-
             if (e.NewMenu is BobberBar bobberBarMenu) {
                 this.Bobber = SBobberBar.ConstructFromBaseClass(bobberBarMenu);
             } 
@@ -242,8 +240,6 @@ namespace RealiticFishing
 
             this.NumFishCaughtToday = 0;
             this.AllFishCaughtToday = new List<Tuple<string, int>>();
-
-            this.Monitor.Log("TimeEvents_AfterDayStarted: " + this.fp.PrintChangedFish(changedFish));
         }
 
         /* SaveEvents_AfterCreate
@@ -252,7 +248,6 @@ namespace RealiticFishing
          */
         private void SaveEvents_AfterCreate(object sender, EventArgs e) 
         {
-            this.Monitor.Log("SaveEvents_AfterLoad");
 
             RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
       
@@ -263,8 +258,6 @@ namespace RealiticFishing
             this.fp.CurrentFishIDCounter = instance.CurrentFishIDCounter;
 
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
-
-            this.Monitor.Log("SaveEvents_AfterCreate: " + instance.fp.PrintChangedFish(new List<String>()));
         }
 
         /* SaveEvents_AfterLoad
@@ -273,8 +266,6 @@ namespace RealiticFishing
         */
         private void SaveEvents_AfterLoad(object sender, EventArgs e)
         {
-            this.Monitor.Log("SaveEvents_AfterLoad");
-
             RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
 
             this.NumFishCaughtToday = instance.NumFishCaughtToday;
@@ -296,8 +287,6 @@ namespace RealiticFishing
             }
 
             this.Helper.WriteJsonFile($"data/{Constants.SaveFolderName}.json", instance);
-
-            this.Monitor.Log("SaveEvents_AfterLoad: " + instance.fp.PrintChangedFish(new List<String>()));
 
             if (Tests.ShouldRunTests) {
                 Tests.RunningTests = true;
@@ -327,7 +316,6 @@ namespace RealiticFishing
                         instance.endangeredFish.Add(fish.Item2, false);
                         Game1.addMailForTomorrow("demetrius" + fish.Item2);
                         instance.endangeredFish[fish.Item2] = true;
-                        this.Monitor.Log("mail sent");
                     } 
                 } else {
                     // Fish is no longer endangered
@@ -390,14 +378,10 @@ namespace RealiticFishing
             this.inventoryWasReconstructed = false;
             this.chestsWereReconstructed = false;
             this.questsWereReconstructed = false;
-
-            this.Monitor.Log("BeforeSave: " + instance.fp.PrintChangedFish(new List<String>()));
         }
 
         private void SaveEvents_AfterSave(object sender, EventArgs e)
         {
-            this.Monitor.Log("SaveEvents_AfterSave");
-
             RealisticFishingData instance = this.Helper.ReadJsonFile<RealisticFishingData>($"data/{Constants.SaveFolderName}.json") ?? new RealisticFishingData();
 
             if (!this.inventoryWasReconstructed)
@@ -499,7 +483,10 @@ namespace RealiticFishing
                 {
                     if (!(i.Item is FishItem fishItem))
                     {
-                        Game1.player.removeItemFromInventory(i.Item);
+                        if (!this.fp.TrapFish.Contains(i.Item.Name)) {
+                            Game1.player.removeItemFromInventory(i.Item);
+                        }
+
                     } else {
 
                         fishItem.syncObject.MarkDirty();

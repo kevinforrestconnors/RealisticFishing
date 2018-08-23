@@ -63,7 +63,7 @@ namespace RealisticFishing
 
             if (ModEntryInstance.fp.IsAverageFishBelowValue(fishName))
             {
-                ModEntryInstance.Monitor.Log("pop too small");
+                
             }
         }
 

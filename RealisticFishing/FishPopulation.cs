@@ -20,6 +20,7 @@ namespace RealisticFishing
         public int CurrentFishIDCounter;
         public Dictionary<string, List<FishModel>> population;
         public List<Tuple<int, string, int, int, int>> AllFish;
+        public List<string> TrapFish;
 
         public PySync syncObject { get; set; }
 
@@ -37,6 +38,8 @@ namespace RealisticFishing
                 if (fishFields[1] != "trap" && fishFields[0] != "Green Algae" && fishFields[0] != "White Algae" && fishFields[0] != "Seaweed")
                 {
                     this.AllFish.Add(new Tuple<int, string, int, int, int>(item.Key, fishFields[0] + " ", int.Parse(fishFields[3]), int.Parse(fishFields[4]), 1));
+                } else if (fishFields[1] == "trap") {
+                    this.TrapFish.Add(fishFields[0]);
                 }
             }
 
@@ -196,6 +199,9 @@ namespace RealisticFishing
                 if (fishFields[1] != "trap" && fishFields[0] != "Green Algae" && fishFields[0] != "White Algae" && fishFields[0] != "Seaweed")
                 {
                     this.AllFish.Add(new Tuple<int, string, int, int, int>(item.Key, fishFields[0] + " ", int.Parse(fishFields[3]), int.Parse(fishFields[4]), 1));
+                } else if (fishFields[1] == "trap")
+                {
+                    this.TrapFish.Add(fishFields[0]);
                 }
             }
         }
